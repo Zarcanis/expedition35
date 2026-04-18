@@ -1,0 +1,3872 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>ONEIRA — Le Laboratoire du Sommeil</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300;1,400&family=DM+Mono:wght@300;400&family=Jost:wght@200;300;400;500&display=swap');
+
+
+:root {
+  --night: #080e18;
+  --night2: #0d1520;
+  --cobalt: #1E3A8A;
+  --violet: #6D28D9;
+  --vs: #8B5CF6;
+  --cream: #F9F8F5;
+  --cream60: rgba(249,248,245,0.6);
+  --cream30: rgba(249,248,245,0.3);
+  --cream12: rgba(249,248,245,0.12);
+  --cream06: rgba(249,248,245,0.06);
+  --vglow: rgba(139,92,246,0.15);
+  --vglow2: rgba(109,40,217,0.08);
+  --border: rgba(249,248,245,0.1);
+  --ease: cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { font-size: 16px; -webkit-text-size-adjust: 100%; }
+
+body {
+  background: var(--night);
+  color: var(--cream);
+  font-family: 'Jost', sans-serif;
+  font-weight: 300;
+  min-height: 100vh;
+  overflow-x: hidden;
+  cursor: default;
+}
+
+/* ═══ CANVAS BACKGROUND ═══ */
+#bg-canvas {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+}
+
+/* ═══ GRAIN OVERLAY ═══ */
+body::after {
+  content: '';
+  position: fixed;
+  inset: -50%;
+  width: 200%;
+  height: 200%;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+  pointer-events: none;
+  z-index: 1;
+  opacity: 0.4;
+  animation: grainShift 8s steps(10) infinite;
+}
+
+@keyframes grainShift {
+  0%,100% { transform: translate(0,0); }
+  10% { transform: translate(-2%,-3%); }
+  20% { transform: translate(3%,1%); }
+  30% { transform: translate(-1%,4%); }
+  40% { transform: translate(2%,-2%); }
+  50% { transform: translate(-3%,2%); }
+  60% { transform: translate(1%,-1%); }
+  70% { transform: translate(-2%,3%); }
+  80% { transform: translate(3%,-3%); }
+  90% { transform: translate(-1%,1%); }
+}
+
+/* ═══ SCREENS ═══ */
+.screen {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: env(safe-area-inset-top, 20px) 24px env(safe-area-inset-bottom, 20px);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 1.2s var(--ease);
+}
+
+.screen.active {
+  opacity: 1;
+  pointer-events: all;
+}
+
+.screen.exit {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* ═══ SCREEN: COVER ═══ */
+#s-cover { text-align: center; }
+
+.cover-sigil {
+  width: 80px;
+  height: 80px;
+  margin: 0 auto 48px;
+  position: relative;
+  animation: sigilRotate 20s linear infinite;
+}
+
+.cover-sigil svg { width: 100%; height: 100%; }
+
+@keyframes sigilRotate {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.cover-eyebrow {
+  font-family: 'DM Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 0.45em;
+  color: var(--vs);
+  text-transform: uppercase;
+  margin-bottom: 32px;
+  opacity: 0;
+  animation: riseIn 1s var(--ease) 0.4s forwards;
+}
+
+.cover-h1 {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: clamp(48px, 12vw, 88px);
+  font-weight: 300;
+  line-height: 0.9;
+  letter-spacing: -0.02em;
+  margin-bottom: 6px;
+  opacity: 0;
+  animation: riseIn 1.2s var(--ease) 0.6s forwards;
+}
+
+.cover-h1 em { font-style: italic; color: var(--vs); }
+
+.cover-sub {
+  font-family: 'DM Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 0.35em;
+  color: var(--cream30);
+  text-transform: uppercase;
+  margin-bottom: 48px;
+  opacity: 0;
+  animation: riseIn 1s var(--ease) 0.9s forwards;
+}
+
+.cover-tagline {
+  font-family: 'Cormorant Garamond', serif;
+  font-style: italic;
+  font-size: 17px;
+  color: var(--cream60);
+  max-width: 340px;
+  line-height: 1.65;
+  margin-bottom: 64px;
+  opacity: 0;
+  animation: riseIn 1s var(--ease) 1.1s forwards;
+}
+
+.btn-primary {
+  font-family: 'DM Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 0.35em;
+  text-transform: uppercase;
+  color: var(--cream);
+  background: transparent;
+  border: 1px solid rgba(139,92,246,0.5);
+  padding: 18px 40px;
+  cursor: pointer;
+  transition: all 0.4s var(--ease);
+  position: relative;
+  overflow: hidden;
+  opacity: 0;
+  animation: riseIn 1s var(--ease) 1.3s forwards;
+}
+
+.btn-primary::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: var(--vglow);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.4s var(--ease);
+}
+
+.btn-primary:hover::before { transform: scaleX(1); }
+.btn-primary:hover { border-color: var(--vs); }
+.btn-primary span { position: relative; z-index: 1; }
+
+@keyframes riseIn {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ═══ SCREEN: ONBOARDING ═══ */
+#s-onboarding {
+  text-align: center;
+  max-width: 480px;
+  margin: auto;
+}
+
+.onboard-step { display: none; }
+.onboard-step.active { display: block; animation: riseIn 0.8s var(--ease) forwards; }
+
+.onboard-num {
+  font-family: 'DM Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 0.4em;
+  color: var(--vs);
+  margin-bottom: 32px;
+}
+
+.onboard-title {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 36px;
+  font-weight: 300;
+  line-height: 1.2;
+  margin-bottom: 20px;
+}
+
+.onboard-body {
+  font-size: 14px;
+  line-height: 1.8;
+  color: var(--cream60);
+  margin-bottom: 40px;
+}
+
+.onboard-input-label {
+  font-family: 'DM Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 0.3em;
+  color: var(--vs);
+  text-transform: uppercase;
+  margin-bottom: 12px;
+  text-align: left;
+}
+
+textarea.big-input, input.big-input {
+  width: 100%;
+  background: var(--cream06);
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  padding: 18px 20px;
+  color: var(--cream);
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 20px;
+  font-style: italic;
+  line-height: 1.5;
+  resize: none;
+  transition: border-color 0.3s;
+  margin-bottom: 8px;
+}
+
+textarea.big-input:focus, input.big-input:focus {
+  outline: none;
+  border-color: rgba(139,92,246,0.5);
+}
+
+.onboard-dots {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  margin-bottom: 32px;
+}
+
+.onboard-dot {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--border);
+  transition: background 0.3s;
+}
+
+.onboard-dot.active { background: var(--vs); }
+
+/* ═══ SCREEN: MAIN APP ═══ */
+#s-app {
+  position: relative;
+  z-index: 10;
+  display: block;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 1.2s var(--ease);
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+#s-app.active { opacity: 1; pointer-events: all; }
+
+.app-inner {
+  max-width: 680px;
+  margin: 0 auto;
+  padding: 0 24px 120px;
+  padding-top: env(safe-area-inset-top, 0px);
+}
+
+/* ═══ APP HEADER ═══ */
+.app-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 28px 0 0;
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  background: linear-gradient(to bottom, var(--night) 60%, transparent);
+  padding-bottom: 20px;
+}
+
+.header-brand {
+  font-family: 'DM Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 0.4em;
+  color: var(--vs);
+  text-transform: uppercase;
+}
+
+.header-actions { display: flex; gap: 16px; align-items: center; }
+
+.header-btn {
+  font-family: 'DM Mono', monospace;
+  font-size: 8px;
+  letter-spacing: 0.25em;
+  color: var(--cream30);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 6px 0;
+  transition: color 0.3s;
+}
+
+.header-btn:hover { color: var(--cream); }
+
+/* ═══ WEEK ARC ═══ */
+.week-arc {
+  padding: 40px 0 32px;
+  text-align: center;
+}
+
+.week-arc-title {
+  font-family: 'DM Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 0.35em;
+  color: var(--cream30);
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+
+.week-question-display {
+  font-family: 'Cormorant Garamond', serif;
+  font-style: italic;
+  font-size: 19px;
+  color: var(--cream60);
+  line-height: 1.5;
+  margin-bottom: 32px;
+  max-width: 500px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* Dream Recall Chart */
+.recall-chart {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 6px;
+  height: 60px;
+  margin-bottom: 8px;
+}
+
+.recall-bar-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  flex: 1;
+  max-width: 52px;
+}
+
+.recall-bar {
+  width: 100%;
+  border-radius: 2px 2px 0 0;
+  transition: height 0.8s var(--ease), background 0.3s;
+  min-height: 2px;
+  background: var(--border);
+  cursor: pointer;
+}
+
+.recall-bar.active-night { background: var(--vs); }
+.recall-bar.done { background: rgba(139,92,246,0.4); }
+.recall-bar.locked { background: var(--border); }
+
+.recall-bar-label {
+  font-family: 'DM Mono', monospace;
+  font-size: 8px;
+  color: var(--cream30);
+  letter-spacing: 0.1em;
+}
+
+/* Night pills */
+.nights-row {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 40px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  padding-bottom: 4px;
+}
+
+.nights-row::-webkit-scrollbar { display: none; }
+
+.night-pill {
+  flex-shrink: 0;
+  font-family: 'DM Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 0.2em;
+  padding: 10px 16px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--cream30);
+  cursor: pointer;
+  transition: all 0.25s;
+  border-radius: 100px;
+  white-space: nowrap;
+}
+
+.night-pill:hover { border-color: rgba(139,92,246,0.4); color: var(--cream60); }
+.night-pill.active { border-color: var(--vs); color: var(--cream); background: rgba(139,92,246,0.1); }
+.night-pill.done { border-color: rgba(109,40,217,0.4); color: var(--vs); }
+.night-pill.locked { opacity: 0.3; cursor: not-allowed; }
+
+/* ═══ NIGHT PANEL ═══ */
+.night-panel { display: none; }
+.night-panel.visible { display: block; animation: riseIn 0.6s var(--ease) forwards; }
+
+.night-hero {
+  position: relative;
+  padding: 48px 0 40px;
+  margin-bottom: 8px;
+}
+
+.night-hero-bg {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at 50% 0%, rgba(109,40,217,0.12) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.night-phase-tag {
+  display: inline-block;
+  font-family: 'DM Mono', monospace;
+  font-size: 8px;
+  letter-spacing: 0.4em;
+  text-transform: uppercase;
+  color: var(--vs);
+  border: 1px solid rgba(139,92,246,0.3);
+  padding: 5px 12px;
+  border-radius: 100px;
+  margin-bottom: 20px;
+}
+
+.night-big-num {
+  position: absolute;
+  top: 20px;
+  right: 0;
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 120px;
+  font-weight: 300;
+  line-height: 1;
+  color: rgba(139,92,246,0.08);
+  letter-spacing: -0.05em;
+  pointer-events: none;
+  user-select: none;
+}
+
+.night-title {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: clamp(30px, 6vw, 44px);
+  font-weight: 300;
+  line-height: 1.15;
+  margin-bottom: 10px;
+}
+
+.night-mission {
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  color: var(--cream30);
+}
+
+/* ═══ CONTENT BLOCKS ═══ */
+.c-block {
+  margin-bottom: 36px;
+}
+
+.c-label {
+  font-family: 'DM Mono', monospace;
+  font-size: 8px;
+  letter-spacing: 0.45em;
+  text-transform: uppercase;
+  color: var(--vs);
+  margin-bottom: 14px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.c-label::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(to right, rgba(139,92,246,0.3), transparent);
+}
+
+.c-text {
+  font-size: 14.5px;
+  line-height: 1.85;
+  color: var(--cream60);
+}
+
+.c-text strong { color: var(--cream); font-weight: 400; }
+.c-text em { font-family: 'Cormorant Garamond', serif; font-style: italic; font-size: 16px; }
+
+/* Script mental */
+.script-box {
+  background: linear-gradient(135deg, rgba(109,40,217,0.1), rgba(30,58,138,0.08));
+  border: 1px solid rgba(139,92,246,0.18);
+  padding: 28px 32px 28px 28px;
+  position: relative;
+  overflow: hidden;
+  border-radius: 2px;
+}
+
+.script-box::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 2px;
+  background: linear-gradient(to bottom, var(--vs), transparent);
+}
+
+.script-box::after {
+  content: '';
+  position: absolute;
+  top: -30px; right: -30px;
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(139,92,246,0.08) 0%, transparent 70%);
+}
+
+.script-text {
+  font-family: 'Cormorant Garamond', serif;
+  font-style: italic;
+  font-size: 20px;
+  line-height: 1.75;
+  color: var(--cream);
+  font-weight: 300;
+}
+
+/* ═══ RITUAL FLOW ═══ */
+.ritual-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 24px;
+  background: var(--cream06);
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  color: var(--cream);
+  cursor: pointer;
+  transition: all 0.3s;
+  font-family: 'Jost', sans-serif;
+  font-size: 14px;
+  font-weight: 300;
+  letter-spacing: 0.02em;
+  margin-bottom: 12px;
+}
+
+.ritual-btn:hover { background: var(--vglow); border-color: rgba(139,92,246,0.3); }
+
+.ritual-btn-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: rgba(139,92,246,0.15);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+}
+
+/* ═══ SCREEN: RITUAL ═══ */
+#s-ritual {
+  text-align: center;
+  background: var(--night);
+}
+
+.ritual-phase-label {
+  font-family: 'DM Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 0.4em;
+  color: var(--vs);
+  text-transform: uppercase;
+  margin-bottom: 40px;
+}
+
+/* Breathing circle */
+.breath-container {
+  position: relative;
+  width: 200px;
+  height: 200px;
+  margin: 0 auto 48px;
+}
+
+.breath-circle-outer {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 1px solid rgba(139,92,246,0.2);
+  animation: breathPulse 8s ease-in-out infinite;
+}
+
+.breath-circle-mid {
+  position: absolute;
+  inset: 16px;
+  border-radius: 50%;
+  border: 1px solid rgba(139,92,246,0.15);
+  animation: breathPulse 8s ease-in-out infinite 0.5s;
+}
+
+.breath-circle-inner {
+  position: absolute;
+  inset: 40px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(109,40,217,0.25) 0%, rgba(109,40,217,0.08) 60%, transparent 100%);
+  animation: breathPulse 8s ease-in-out infinite 1s;
+}
+
+.breath-text {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Cormorant Garamond', serif;
+  font-style: italic;
+  font-size: 15px;
+  color: var(--cream60);
+  animation: breathText 8s ease-in-out infinite;
+}
+
+@keyframes breathPulse {
+  0%, 100% { transform: scale(1); opacity: 0.5; }
+  50% { transform: scale(1.08); opacity: 1; }
+}
+
+@keyframes breathText {
+  0%, 100% { opacity: 0.4; }
+  25% { opacity: 1; }
+  75% { opacity: 0.6; }
+}
+
+/* Timer circle */
+.timer-container {
+  position: relative;
+  width: 160px;
+  height: 160px;
+  margin: 0 auto 32px;
+}
+
+.timer-svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+
+.timer-track {
+  fill: none;
+  stroke: var(--border);
+  stroke-width: 1.5;
+}
+
+.timer-progress {
+  fill: none;
+  stroke: var(--vs);
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-dasharray: 408;
+  stroke-dashoffset: 408;
+  transition: stroke-dashoffset 1s linear;
+}
+
+.timer-display {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+}
+
+.timer-min {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 38px;
+  font-weight: 300;
+  line-height: 1;
+}
+
+.timer-label {
+  font-family: 'DM Mono', monospace;
+  font-size: 8px;
+  letter-spacing: 0.3em;
+  color: var(--cream30);
+}
+
+.ritual-heading {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 28px;
+  font-weight: 300;
+  margin-bottom: 12px;
+  line-height: 1.2;
+}
+
+.ritual-body {
+  font-size: 14px;
+  color: var(--cream60);
+  line-height: 1.8;
+  max-width: 360px;
+  margin: 0 auto 40px;
+}
+
+.ritual-script {
+  font-family: 'Cormorant Garamond', serif;
+  font-style: italic;
+  font-size: 18px;
+  color: var(--cream);
+  line-height: 1.8;
+  max-width: 340px;
+  margin: 0 auto 40px;
+  opacity: 0;
+  animation: slowFadeIn 2s ease 1s forwards;
+}
+
+@keyframes slowFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.btn-ghost {
+  font-family: 'DM Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: var(--cream30);
+  background: none;
+  border: 1px solid var(--border);
+  padding: 14px 28px;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.btn-ghost:hover { border-color: rgba(139,92,246,0.4); color: var(--cream); }
+
+.ritual-steps { display: none; }
+.ritual-steps.active { display: block; }
+
+/* ═══ CAPTURE INTERFACE ═══ */
+.capture-area {
+  position: relative;
+}
+
+.journal-ta {
+  width: 100%;
+  background: var(--cream06);
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  padding: 18px 20px;
+  color: var(--cream);
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 17px;
+  line-height: 1.7;
+  resize: vertical;
+  min-height: 90px;
+  transition: border-color 0.3s, background 0.3s;
+}
+
+.journal-ta::placeholder {
+  color: rgba(249,248,245,0.18);
+  font-style: italic;
+}
+
+.journal-ta:focus {
+  outline: none;
+  border-color: rgba(139,92,246,0.35);
+  background: rgba(139,92,246,0.04);
+}
+
+/* Tags */
+.tag-system { margin-top: 10px; }
+
+.tags-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.sym-tag {
+  font-family: 'DM Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 0.15em;
+  padding: 6px 12px;
+  border: 1px solid var(--border);
+  border-radius: 100px;
+  cursor: pointer;
+  transition: all 0.2s;
+  background: transparent;
+  color: var(--cream30);
+}
+
+.sym-tag:hover { border-color: rgba(139,92,246,0.5); color: var(--cream60); }
+.sym-tag.selected { border-color: var(--vs); color: var(--vs); background: rgba(139,92,246,0.08); }
+
+.tags-label {
+  font-family: 'DM Mono', monospace;
+  font-size: 8px;
+  letter-spacing: 0.3em;
+  color: var(--cream30);
+  margin-bottom: 8px;
+}
+
+/* Recall score */
+.recall-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.recall-btn {
+  flex: 1;
+  padding: 12px 8px;
+  border: 1px solid var(--border);
+  background: transparent;
+  border-radius: 2px;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.recall-btn:hover { border-color: rgba(139,92,246,0.4); }
+.recall-btn.sel { border-color: var(--vs); background: rgba(139,92,246,0.1); }
+
+.recall-num {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 22px;
+  color: var(--cream60);
+}
+
+.recall-btn.sel .recall-num { color: var(--vs); }
+
+.recall-word {
+  font-family: 'DM Mono', monospace;
+  font-size: 7px;
+  letter-spacing: 0.15em;
+  color: var(--cream30);
+}
+
+/* Capture grid */
+.capture-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.capture-cell { display: flex; flex-direction: column; gap: 6px; }
+.capture-cell-label {
+  font-family: 'DM Mono', monospace;
+  font-size: 8px;
+  letter-spacing: 0.3em;
+  color: var(--vs);
+  text-transform: uppercase;
+}
+
+.capture-full { grid-column: 1 / -1; }
+
+/* 3 Traductions */
+.traduction-card {
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  overflow: hidden;
+  margin-bottom: 12px;
+}
+
+.traduction-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 18px;
+  background: var(--cream06);
+  border-bottom: 1px solid var(--border);
+}
+
+.traduction-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: rgba(139,92,246,0.15);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+}
+
+.traduction-title {
+  font-family: 'DM Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 0.2em;
+  color: var(--cream60);
+  text-transform: uppercase;
+}
+
+.traduction-body { padding: 12px 18px; }
+
+/* Exemple */
+.exemple {
+  border-left: 2px solid rgba(139,92,246,0.25);
+  padding-left: 18px;
+  font-family: 'Cormorant Garamond', serif;
+  font-style: italic;
+  font-size: 15px;
+  color: rgba(249,248,245,0.38);
+  line-height: 1.75;
+}
+
+/* Question list */
+.q-list { display: flex; flex-direction: column; gap: 16px; }
+
+.q-item { display: flex; flex-direction: column; gap: 8px; }
+
+.q-text {
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  color: var(--cream60);
+  line-height: 1.6;
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+}
+
+.q-text::before { content: '→'; color: var(--vs); flex-shrink: 0; }
+
+/* ═══ COMPLETE BTN ═══ */
+.complete-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 20px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--cream30);
+  font-family: 'DM Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.4s;
+  margin-top: 48px;
+  position: relative;
+  overflow: hidden;
+  border-radius: 1px;
+}
+
+.complete-btn::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(109,40,217,0.1), rgba(30,58,138,0.08));
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.5s var(--ease);
+}
+
+.complete-btn:hover::before { transform: scaleX(1); }
+.complete-btn:hover { border-color: rgba(139,92,246,0.5); color: var(--cream); }
+
+.complete-btn.done {
+  border-color: rgba(109,40,217,0.4);
+  color: var(--vs);
+  background: rgba(109,40,217,0.05);
+}
+
+/* ═══ SCREEN: FINAL ═══ */
+#s-final { text-align: center; }
+
+.final-sigil {
+  width: 100px;
+  height: 100px;
+  margin: 0 auto 40px;
+}
+
+.final-title {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 42px;
+  font-weight: 300;
+  line-height: 1.15;
+  margin-bottom: 16px;
+}
+
+.final-sub {
+  font-family: 'Cormorant Garamond', serif;
+  font-style: italic;
+  font-size: 18px;
+  color: var(--cream60);
+  margin-bottom: 48px;
+}
+
+.insight-card {
+  background: linear-gradient(135deg, rgba(109,40,217,0.1), rgba(30,58,138,0.08));
+  border: 1px solid rgba(139,92,246,0.2);
+  padding: 32px;
+  text-align: left;
+  margin-bottom: 20px;
+  border-radius: 2px;
+}
+
+.insight-label {
+  font-family: 'DM Mono', monospace;
+  font-size: 8px;
+  letter-spacing: 0.4em;
+  color: var(--vs);
+  margin-bottom: 16px;
+  text-transform: uppercase;
+}
+
+.insight-text {
+  font-family: 'Cormorant Garamond', serif;
+  font-style: italic;
+  font-size: 19px;
+  line-height: 1.7;
+  color: var(--cream);
+}
+
+.score-avg {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  justify-content: center;
+  margin: 32px 0;
+}
+
+.score-big {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 72px;
+  font-weight: 300;
+  color: var(--vs);
+  line-height: 1;
+}
+
+.score-label {
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 0.25em;
+  color: var(--cream30);
+}
+
+.final-next {
+  font-family: 'DM Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 0.2em;
+  color: var(--cream30);
+  margin-bottom: 12px;
+}
+
+.next-labs {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 40px;
+}
+
+.next-lab-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 18px;
+  border: 1px solid var(--border);
+  font-family: 'DM Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 0.15em;
+  color: var(--cream30);
+  border-radius: 2px;
+}
+
+.next-lab-tag {
+  color: rgba(139,92,246,0.4);
+  font-size: 8px;
+}
+
+.export-row { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+
+/* ═══ SLEEP SCREEN ═══ */
+#s-sleep {
+  background: #040810;
+  text-align: center;
+}
+
+.sleep-title {
+  font-family: 'Cormorant Garamond', serif;
+  font-style: italic;
+  font-size: 32px;
+  font-weight: 300;
+  color: rgba(249,248,245,0.6);
+  margin-bottom: 16px;
+}
+
+.sleep-sub {
+  font-family: 'DM Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 0.4em;
+  color: rgba(249,248,245,0.15);
+  text-transform: uppercase;
+}
+
+.sleep-orb {
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 40% 35%, rgba(109,40,217,0.35) 0%, rgba(30,58,138,0.15) 50%, transparent 100%);
+  margin: 0 auto 48px;
+  animation: orbFloat 6s ease-in-out infinite;
+  box-shadow: 0 0 60px rgba(109,40,217,0.2), 0 0 120px rgba(109,40,217,0.08);
+}
+
+@keyframes orbFloat {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-12px); }
+}
+
+/* ═══ DIVIDER ═══ */
+.divider {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 36px 0;
+}
+
+/* ═══ TOAST ═══ */
+.toast {
+  position: fixed;
+  bottom: max(32px, env(safe-area-inset-bottom, 32px));
+  left: 50%;
+  transform: translateX(-50%) translateY(20px);
+  background: rgba(8,14,24,0.95);
+  border: 1px solid rgba(139,92,246,0.4);
+  color: var(--cream);
+  font-family: 'DM Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 0.25em;
+  padding: 14px 24px;
+  z-index: 1000;
+  opacity: 0;
+  transition: all 0.4s;
+  pointer-events: none;
+  backdrop-filter: blur(10px);
+  white-space: nowrap;
+}
+
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+/* ═══ SYMBOL MAP ═══ */
+.symbol-map {
+  background: var(--cream06);
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  padding: 20px;
+}
+
+.symbol-map-title {
+  font-family: 'DM Mono', monospace;
+  font-size: 8px;
+  letter-spacing: 0.3em;
+  color: var(--cream30);
+  text-transform: uppercase;
+  margin-bottom: 16px;
+}
+
+.symbol-cloud {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.symbol-item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-family: 'DM Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 0.1em;
+  color: var(--cream60);
+  background: rgba(139,92,246,0.08);
+  border: 1px solid rgba(139,92,246,0.15);
+  padding: 4px 10px;
+  border-radius: 100px;
+}
+
+.symbol-count {
+  color: var(--vs);
+  font-size: 8px;
+}
+
+/* ═══ AUDIO INDICATOR ═══ */
+.audio-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: 'DM Mono', monospace;
+  font-size: 8px;
+  letter-spacing: 0.25em;
+  color: var(--cream30);
+  background: none;
+  border: none;
+  cursor: pointer;
+  transition: color 0.3s;
+  padding: 6px 0;
+}
+
+.audio-toggle:hover { color: var(--cream60); }
+.audio-toggle.on { color: var(--vs); }
+
+.audio-bars {
+  display: flex;
+  gap: 2px;
+  align-items: flex-end;
+  height: 12px;
+}
+
+.audio-bar {
+  width: 2px;
+  background: currentColor;
+  border-radius: 1px;
+  opacity: 0.5;
+}
+
+.audio-toggle.on .audio-bar { animation: audioAnim 0.8s ease infinite; }
+.audio-toggle.on .audio-bar:nth-child(1) { animation-delay: 0s; }
+.audio-toggle.on .audio-bar:nth-child(2) { animation-delay: 0.15s; }
+.audio-toggle.on .audio-bar:nth-child(3) { animation-delay: 0.3s; }
+
+@keyframes audioAnim {
+  0%, 100% { height: 3px; }
+  50% { height: 10px; }
+}
+
+/* ═══ RESPONSIVE ═══ */
+@media (max-width: 480px) {
+  .capture-grid { grid-template-columns: 1fr; }
+  .capture-full { grid-column: 1; }
+  .recall-row { gap: 4px; }
+  .recall-word { display: none; }
+  .nights-row { gap: 4px; }
+}
+
+/* ═══ SCROLLBAR ═══ */
+::-webkit-scrollbar { width: 3px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(139,92,246,0.3); border-radius: 2px; }
+
+/* ══════════════════════════════════════
+   MODULE 1 — DREAM CONSTELLATION
+══════════════════════════════════════ */
+#s-constellation {
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.constellation-wrap {
+  width: 100%;
+  max-width: 680px;
+  margin: 0 auto;
+  padding: 60px 24px 80px;
+  text-align: center;
+}
+
+.constellation-eyebrow {
+  font-family: 'DM Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 0.45em;
+  color: var(--vs);
+  text-transform: uppercase;
+  margin-bottom: 20px;
+}
+
+.constellation-title {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 38px;
+  font-weight: 300;
+  line-height: 1.2;
+  margin-bottom: 8px;
+}
+
+.constellation-sub {
+  font-family: 'Cormorant Garamond', serif;
+  font-style: italic;
+  font-size: 16px;
+  color: var(--cream30);
+  margin-bottom: 40px;
+}
+
+#constellation-canvas {
+  width: 100%;
+  max-width: 500px;
+  border-radius: 4px;
+  cursor: pointer;
+  touch-action: none;
+}
+
+.constellation-legend {
+  display: flex;
+  gap: 24px;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-top: 24px;
+  margin-bottom: 40px;
+}
+
+.constellation-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: 'DM Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 0.2em;
+  color: var(--cream30);
+}
+
+.legend-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--vs);
+}
+
+/* ══════════════════════════════════════
+   MODULE 2 — PATTERN ENGINE
+══════════════════════════════════════ */
+.pattern-engine {
+  background: linear-gradient(135deg, rgba(30,58,138,0.12), rgba(109,40,217,0.06));
+  border: 1px solid rgba(30,58,138,0.3);
+  border-radius: 2px;
+  padding: 32px;
+  margin: 32px 0;
+  text-align: left;
+}
+
+.pattern-engine-title {
+  font-family: 'DM Mono', monospace;
+  font-size: 8px;
+  letter-spacing: 0.5em;
+  color: var(--vs);
+  text-transform: uppercase;
+  margin-bottom: 28px;
+}
+
+.pattern-stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.pattern-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 16px;
+  background: rgba(249,248,245,0.04);
+  border: 1px solid var(--border);
+  border-radius: 2px;
+}
+
+.pattern-stat-value {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 28px;
+  font-weight: 300;
+  color: var(--vs);
+  line-height: 1;
+}
+
+.pattern-stat-label {
+  font-family: 'DM Mono', monospace;
+  font-size: 8px;
+  letter-spacing: 0.25em;
+  color: var(--cream30);
+  text-transform: uppercase;
+  line-height: 1.4;
+}
+
+.pattern-keywords {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.pattern-keyword {
+  font-family: 'DM Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 0.1em;
+  padding: 4px 10px;
+  background: rgba(139,92,246,0.08);
+  border: 1px solid rgba(139,92,246,0.15);
+  border-radius: 100px;
+  color: var(--cream60);
+}
+
+.pattern-motif {
+  margin-top: 20px;
+  padding-top: 20px;
+  border-top: 1px solid var(--border);
+  font-family: 'Cormorant Garamond', serif;
+  font-style: italic;
+  font-size: 17px;
+  color: var(--cream60);
+  line-height: 1.65;
+}
+
+@media (max-width: 480px) {
+  .pattern-stats { grid-template-columns: 1fr 1fr; }
+}
+
+/* ══════════════════════════════════════
+   MODULE 3 — FINAL INSIGHT CARDS
+══════════════════════════════════════ */
+.insight-cards-row {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 28px 0;
+  text-align: left;
+}
+
+.insight-card-v2 {
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  overflow: hidden;
+  transition: border-color 0.3s;
+}
+
+.insight-card-v2:hover { border-color: rgba(139,92,246,0.35); }
+
+.insight-card-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 20px;
+  background: var(--cream06);
+  border-bottom: 1px solid var(--border);
+}
+
+.insight-card-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: rgba(139,92,246,0.12);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  flex-shrink: 0;
+}
+
+.insight-card-type {
+  font-family: 'DM Mono', monospace;
+  font-size: 8px;
+  letter-spacing: 0.4em;
+  text-transform: uppercase;
+  color: var(--vs);
+}
+
+.insight-card-body {
+  padding: 18px 20px;
+  font-family: 'Cormorant Garamond', serif;
+  font-style: italic;
+  font-size: 17px;
+  line-height: 1.7;
+  color: var(--cream);
+}
+
+.insight-card-body.action-style {
+  font-family: 'Jost', sans-serif;
+  font-style: normal;
+  font-size: 14px;
+  color: var(--cream60);
+  line-height: 1.7;
+}
+
+/* ══════════════════════════════════════
+   MODULE 4 — SHARE CARD
+══════════════════════════════════════ */
+.share-section {
+  margin: 32px 0;
+  padding: 28px;
+  border: 1px solid rgba(139,92,246,0.2);
+  border-radius: 2px;
+  background: linear-gradient(135deg, rgba(109,40,217,0.06), rgba(30,58,138,0.08));
+  text-align: center;
+}
+
+.share-section-title {
+  font-family: 'DM Mono', monospace;
+  font-size: 8px;
+  letter-spacing: 0.4em;
+  color: var(--vs);
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+
+.share-section-sub {
+  font-family: 'Cormorant Garamond', serif;
+  font-style: italic;
+  font-size: 15px;
+  color: var(--cream30);
+  margin-bottom: 20px;
+}
+
+#share-preview {
+  width: 100%;
+  max-width: 400px;
+  border-radius: 4px;
+  margin: 0 auto 20px;
+  display: block;
+  border: 1px solid var(--border);
+}
+
+/* Constellation unlock teaser in app */
+.constellation-teaser {
+  border: 1px solid rgba(139,92,246,0.2);
+  border-radius: 2px;
+  padding: 24px;
+  text-align: center;
+  background: linear-gradient(135deg, rgba(109,40,217,0.06), transparent);
+  margin-top: 48px;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.constellation-teaser:hover { border-color: rgba(139,92,246,0.5); background: rgba(139,92,246,0.08); }
+
+.constellation-teaser-title {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 22px;
+  margin-bottom: 6px;
+}
+
+.constellation-teaser-sub {
+  font-family: 'DM Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 0.25em;
+  color: var(--cream30);
+  text-transform: uppercase;
+}
+
+.constellation-teaser-locked {
+  font-family: 'DM Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 0.2em;
+  color: rgba(139,92,246,0.4);
+  margin-top: 10px;
+}
+
+</style>
+</head>
+<body>
+
+<canvas id="bg-canvas"></canvas>
+
+<!-- ════════════════════════════════
+     SCREEN: COVER
+════════════════════════════════ -->
+<div class="screen active" id="s-cover">
+  <div class="cover-sigil">
+    <svg viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="40" cy="40" r="38" stroke="rgba(139,92,246,0.3)" stroke-width="0.5"/>
+      <circle cx="40" cy="40" r="28" stroke="rgba(139,92,246,0.2)" stroke-width="0.5"/>
+      <circle cx="40" cy="40" r="4" fill="rgba(139,92,246,0.6)"/>
+      <line x1="40" y1="2" x2="40" y2="78" stroke="rgba(139,92,246,0.12)" stroke-width="0.5"/>
+      <line x1="2" y1="40" x2="78" y2="40" stroke="rgba(139,92,246,0.12)" stroke-width="0.5"/>
+      <line x1="13" y1="13" x2="67" y2="67" stroke="rgba(139,92,246,0.1)" stroke-width="0.5"/>
+      <line x1="67" y1="13" x2="13" y2="67" stroke="rgba(139,92,246,0.1)" stroke-width="0.5"/>
+      <polygon points="40,12 46,28 62,28 50,38 54,54 40,44 26,54 30,38 18,28 34,28" stroke="rgba(139,92,246,0.35)" stroke-width="0.5" fill="none"/>
+    </svg>
+  </div>
+  <div class="cover-eyebrow">ONEIRA · Night Lab Series · 01</div>
+  <h1 class="cover-h1">Le <em>Laboratoire</em><br>du Sommeil</h1>
+  <div class="cover-sub">The 7-Night Dream Experiment</div>
+  <p class="cover-tagline">Utilisez votre nuit pour explorer<br>un problème réel</p>
+  <button class="btn-primary" onclick="goTo('onboarding')"><span>Commencer l'expérience</span></button>
+</div>
+
+<!-- ════════════════════════════════
+     SCREEN: ONBOARDING
+════════════════════════════════ -->
+<div class="screen" id="s-onboarding" style="overflow-y:auto;">
+  <div style="max-width:480px;width:100%;text-align:center;">
+
+    <div class="onboard-dots" id="onboard-dots">
+      <div class="onboard-dot active" id="od-0"></div>
+      <div class="onboard-dot" id="od-1"></div>
+      <div class="onboard-dot" id="od-2"></div>
+    </div>
+
+    <!-- Step 0: Welcome -->
+    <div class="onboard-step active" id="ob-0">
+      <div class="onboard-num">01 / 03</div>
+      <h2 class="onboard-title">Une expérience cognitive,<br>pas une méthode mystique.</h2>
+      <p class="onboard-body">Pendant 7 nuits, vous allez utiliser les mécanismes réels du sommeil pour explorer un problème. 10 minutes par soir. Votre cerveau fait le reste.<br><br>Fondé sur les travaux de Deirdre Barrett (Harvard) et Robert Stickgold sur la créativité REM.</p>
+      <button class="btn-primary" onclick="nextOnboard()"><span>Continuer →</span></button>
+    </div>
+
+    <!-- Step 1: Rules -->
+    <div class="onboard-step" id="ob-1">
+      <div class="onboard-num">02 / 03</div>
+      <h2 class="onboard-title">Les règles de<br>l'expérience</h2>
+      <p class="onboard-body">
+        <strong style="color:var(--cream)">Une seule question</strong> par semaine. Le signal se dilue si vous en posez plusieurs.<br><br>
+        <strong style="color:var(--cream)">Carnet + stylo</strong> sur votre table de nuit. Papier uniquement — pas d'écran au réveil.<br><br>
+        <strong style="color:var(--cream)">Notez dès le réveil</strong> — avant de bouger, avant le téléphone. La mémoire onirique disparaît en minutes.
+      </p>
+      <button class="btn-primary" onclick="nextOnboard()"><span>Continuer →</span></button>
+    </div>
+
+    <!-- Step 2: Question -->
+    <div class="onboard-step" id="ob-2">
+      <div class="onboard-num">03 / 03</div>
+      <h2 class="onboard-title">Votre question<br>d'incubation</h2>
+      <p class="onboard-body">Ouverte, exploratoire, à la première personne. Elle doit vous intriguer — sans vous angoisser.</p>
+      <div class="onboard-input-label">Votre question cette semaine</div>
+      <textarea class="big-input" id="ob-question" rows="3" placeholder="Quelle direction est-ce que je n'ai pas encore vraiment envisagée ?" oninput="saveAll()"></textarea>
+      <p style="font-family:'DM Mono',monospace;font-size:8px;letter-spacing:0.2em;color:var(--cream30);margin-bottom:32px;text-align:left;">Évitez les questions binaires (Oui/Non) ou trop vagues.</p>
+      <button class="btn-primary" id="ob-start-btn" onclick="startApp()"><span>Commencer la Nuit 1 →</span></button>
+      <div style="margin-top:20px;">
+        <button class="btn-ghost" style="font-size:10px;padding:8px 16px;opacity:0.5;" onclick="document.getElementById('import-json-input').click()">↑ Reprendre depuis un fichier JSON</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════
+     SCREEN: MAIN APP
+════════════════════════════════ -->
+<div id="s-app">
+  <div class="app-inner">
+
+    <!-- Header -->
+    <div class="app-header">
+      <div class="header-brand">ONEIRA · Lab 01</div>
+      <div class="header-actions">
+        <button class="audio-toggle" id="audio-btn" onclick="toggleAudio()">
+          <div class="audio-bars">
+            <div class="audio-bar" style="height:4px"></div>
+            <div class="audio-bar" style="height:8px"></div>
+            <div class="audio-bar" style="height:4px"></div>
+          </div>
+          <span id="audio-label">Son</span>
+        </button>
+        <button class="header-btn" onclick="document.getElementById('import-json-input').click()" title="Restaurer depuis un fichier JSON">↑ Import</button>
+        <button class="header-btn" onclick="showExport()">Export</button>
+      </div>
+    </div>
+
+    <!-- Week overview -->
+    <div class="week-arc">
+      <div class="week-arc-title">Question de la semaine</div>
+      <div class="week-question-display" id="week-q-display">—</div>
+
+      <!-- Recall chart -->
+      <div class="recall-chart" id="recall-chart">
+        <div class="recall-bar-wrap" onclick="showNight(1)">
+          <div class="recall-bar active-night" id="chart-n1" style="height:2px" title="Nuit 1"></div>
+          <div class="recall-bar-label">N1</div>
+        </div>
+        <div class="recall-bar-wrap" onclick="showNight(2)">
+          <div class="recall-bar" id="chart-n2" style="height:2px" title="Nuit 2"></div>
+          <div class="recall-bar-label">N2</div>
+        </div>
+        <div class="recall-bar-wrap" onclick="showNight(3)">
+          <div class="recall-bar" id="chart-n3" style="height:2px" title="Nuit 3"></div>
+          <div class="recall-bar-label">N3</div>
+        </div>
+        <div class="recall-bar-wrap" onclick="showNight(4)">
+          <div class="recall-bar" id="chart-n4" style="height:2px" title="Nuit 4"></div>
+          <div class="recall-bar-label">N4</div>
+        </div>
+        <div class="recall-bar-wrap" onclick="showNight(5)">
+          <div class="recall-bar" id="chart-n5" style="height:2px" title="Nuit 5"></div>
+          <div class="recall-bar-label">N5</div>
+        </div>
+        <div class="recall-bar-wrap" onclick="showNight(6)">
+          <div class="recall-bar" id="chart-n6" style="height:2px" title="Nuit 6"></div>
+          <div class="recall-bar-label">N6</div>
+        </div>
+        <div class="recall-bar-wrap" onclick="showNight(7)">
+          <div class="recall-bar" id="chart-n7" style="height:2px" title="Nuit 7"></div>
+          <div class="recall-bar-label">N7</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Night pills -->
+    <div class="nights-row" id="nights-row">
+      <button class="night-pill active" id="pill-1" onclick="showNight(1)">Nuit 1 · Activation</button>
+      <button class="night-pill" id="pill-2" onclick="showNight(2)">Nuit 2 · Question</button>
+      <button class="night-pill" id="pill-3" onclick="showNight(3)">Nuit 3 · Installation</button>
+      <button class="night-pill" id="pill-4" onclick="showNight(4)">Nuit 4 · Incubation</button>
+      <button class="night-pill" id="pill-5" onclick="showNight(5)">Nuit 5 · Capture</button>
+      <button class="night-pill" id="pill-6" onclick="showNight(6)">Nuit 6 · Traduction</button>
+      <button class="night-pill" id="pill-7" onclick="showNight(7)">Nuit 7 · Synthèse</button>
+    </div>
+
+    <!-- ── NUIT 1 ── -->
+    <div class="night-panel visible" id="np-1">
+      <div class="night-hero">
+        <div class="night-hero-bg"></div>
+        <div class="night-big-num">01</div>
+        <div class="night-phase-tag">Phase 1 · Activation</div>
+        <h2 class="night-title">Activer le souvenir<br>des rêves</h2>
+        <div class="night-mission">Mission → Développer votre mémoire onirique</div>
+      </div>
+
+      <div class="c-block">
+        <div class="c-label">Objectif</div>
+        <p class="c-text">La plupart des adultes ne se souviennent que rarement de leurs rêves — non parce qu'ils ne rêvent pas, mais parce qu'ils n'ont jamais développé l'attention pour les capturer. Cette première nuit est un calibrage : vous entraînez le muscle fondamental sur lequel tout le protocole repose.</p>
+      </div>
+
+      <div class="c-block">
+        <div class="c-label">Préparation</div>
+        <p class="c-text">Posez votre carnet ouvert sur votre table de nuit avec un stylo. Avant d'éteindre la lumière, écrivez au sommet d'une page : <strong>« Cette nuit, je me souviendrai de mes rêves. »</strong> Ce n'est pas une vague intention — c'est une instruction donnée à votre système attentionnel.</p>
+      </div>
+
+      <button class="ritual-btn" onclick="startRitual(1)">
+        <span>Lancer le rituel pré-sommeil</span>
+        <div class="ritual-btn-icon">◯</div>
+      </button>
+
+      <div class="c-block">
+        <div class="c-label">Script mental</div>
+        <div class="script-box">
+          <p class="script-text">Cette nuit, mon esprit observe et retient.<br>Au réveil, les images reviennent.<br>Je fais confiance à ma mémoire.</p>
+        </div>
+      </div>
+
+      <hr class="divider">
+
+      <div class="c-block">
+        <div class="c-label">Au réveil · Notes libres</div>
+        <textarea class="journal-ta" id="n1-notes" rows="5" placeholder="Notez tout ce qui remonte : fragments, couleurs, émotions, un seul mot. Ne filtrez pas…" oninput="saveAll()"></textarea>
+        <div class="tag-system" style="margin-top:12px">
+          <div class="tags-label">Symboles présents</div>
+          <div class="tags-row" id="tags-n1">
+            <button class="sym-tag" onclick="toggleTag(this,'n1')">Eau</button>
+            <button class="sym-tag" onclick="toggleTag(this,'n1')">Maison</button>
+            <button class="sym-tag" onclick="toggleTag(this,'n1')">Chute</button>
+            <button class="sym-tag" onclick="toggleTag(this,'n1')">Lumière</button>
+            <button class="sym-tag" onclick="toggleTag(this,'n1')">Chemin</button>
+            <button class="sym-tag" onclick="toggleTag(this,'n1')">Porte</button>
+            <button class="sym-tag" onclick="toggleTag(this,'n1')">Foule</button>
+            <button class="sym-tag" onclick="toggleTag(this,'n1')">Vol</button>
+            <button class="sym-tag" onclick="toggleTag(this,'n1')">Animal</button>
+            <button class="sym-tag" onclick="toggleTag(this,'n1')">Miroir</button>
+            <button class="sym-tag" onclick="toggleTag(this,'n1')">Escalier</button>
+            <button class="sym-tag" onclick="toggleTag(this,'n1')">Véhicule</button>
+            <button class="sym-tag" onclick="toggleTag(this,'n1')">Inconnu</button>
+            <button class="sym-tag" onclick="toggleTag(this,'n1')">Transformation</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="c-block">
+        <div class="c-label">Questions carnet</div>
+        <div class="q-list">
+          <div class="q-item">
+            <div class="q-text">Qu'est-ce qui est remonté ce matin, même fragmentairement ?</div>
+            <textarea class="journal-ta" id="n1-q1" rows="2" placeholder="…" oninput="saveAll()"></textarea>
+          </div>
+          <div class="q-item">
+            <div class="q-text">Y avait-il des émotions associées à ces images ?</div>
+            <textarea class="journal-ta" id="n1-q2" rows="2" placeholder="…" oninput="saveAll()"></textarea>
+          </div>
+          <div class="q-item">
+            <div class="q-text">Avez-vous eu besoin de vous concentrer, ou c'est venu spontanément ?</div>
+            <textarea class="journal-ta" id="n1-q3" rows="2" placeholder="…" oninput="saveAll()"></textarea>
+          </div>
+        </div>
+      </div>
+
+      <div class="c-block">
+        <div class="c-label">Dream Recall Score</div>
+        <div class="recall-row">
+          <button class="recall-btn" onclick="setScore(1,1)" id="n1-s1"><div class="recall-num">1</div><div class="recall-word">Aucun</div></button>
+          <button class="recall-btn" onclick="setScore(1,2)" id="n1-s2"><div class="recall-num">2</div><div class="recall-word">Fragments</div></button>
+          <button class="recall-btn" onclick="setScore(1,3)" id="n1-s3"><div class="recall-num">3</div><div class="recall-word">Partiel</div></button>
+          <button class="recall-btn" onclick="setScore(1,4)" id="n1-s4"><div class="recall-num">4</div><div class="recall-word">Clair</div></button>
+          <button class="recall-btn" onclick="setScore(1,5)" id="n1-s5"><div class="recall-num">5</div><div class="recall-word">Détaillé</div></button>
+        </div>
+      </div>
+
+      <button class="complete-btn" id="n1-done" onclick="completeNight(1)">✦ &nbsp; Marquer la Nuit 1 comme complète</button>
+    </div>
+
+    <!-- ── NUIT 2 ── -->
+    <div class="night-panel" id="np-2">
+      <div class="night-hero">
+        <div class="night-hero-bg"></div>
+        <div class="night-big-num">02</div>
+        <div class="night-phase-tag">Phase 1 · Activation</div>
+        <h2 class="night-title">Formuler une question<br>incubable</h2>
+        <div class="night-mission">Mission → Transformer votre problème en question explorable</div>
+      </div>
+
+      <div class="c-block">
+        <div class="c-label">Objectif</div>
+        <p class="c-text">L'incubation onirique fonctionne mieux avec une question bien construite. Une bonne question pour le sommeil n'est pas une demande factuelle — c'est une invitation à explorer un espace de possibilités.</p>
+      </div>
+
+      <div class="c-block">
+        <div class="c-label">Protocole — Max 10 min</div>
+        <p class="c-text">Transformez votre problème en une seule phrase interrogative, ouverte, à la première personne. <strong>Pas : Quelle est la bonne stratégie ?</strong> Mais : <strong>Quelle direction est-ce que je n'ai pas encore vraiment envisagée ?</strong> Écrivez-la au propre. Lisez-la à voix basse. Répétez-la trois fois mentalement.</p>
+      </div>
+
+      <div class="c-block">
+        <div class="c-label">Exemple</div>
+        <div class="exemple">Un entrepreneur hésite entre deux pivots. Sa version incubable : Qu'est-ce que mes clients cherchent vraiment que je n'ai pas encore su leur offrir ?</div>
+      </div>
+
+      <button class="ritual-btn" onclick="startRitual(2)">
+        <span>Lancer le rituel pré-sommeil</span>
+        <div class="ritual-btn-icon">◯</div>
+      </button>
+
+      <div class="c-block">
+        <div class="c-label">Script mental</div>
+        <div class="script-box">
+          <p class="script-text">Ma question est claire.<br>Je la confie à mon cerveau ce soir.<br>Demain matin, j'écoute ce qui remonte.</p>
+        </div>
+      </div>
+
+      <hr class="divider">
+
+      <div class="c-block">
+        <div class="c-label">Au réveil · Notes</div>
+        <textarea class="journal-ta" id="n2-notes" rows="5" placeholder="Fragments, images, mots, sensations…" oninput="saveAll()"></textarea>
+        <div class="tag-system" style="margin-top:12px">
+          <div class="tags-label">Symboles présents</div>
+          <div class="tags-row" id="tags-n2">
+            <button class="sym-tag" onclick="toggleTag(this,'n2')">Eau</button>
+            <button class="sym-tag" onclick="toggleTag(this,'n2')">Maison</button>
+            <button class="sym-tag" onclick="toggleTag(this,'n2')">Chute</button>
+            <button class="sym-tag" onclick="toggleTag(this,'n2')">Lumière</button>
+            <button class="sym-tag" onclick="toggleTag(this,'n2')">Chemin</button>
+            <button class="sym-tag" onclick="toggleTag(this,'n2')">Porte</button>
+            <button class="sym-tag" onclick="toggleTag(this,'n2')">Foule</button>
+            <button class="sym-tag" onclick="toggleTag(this,'n2')">Vol</button>
+            <button class="sym-tag" onclick="toggleTag(this,'n2')">Animal</button>
+            <button class="sym-tag" onclick="toggleTag(this,'n2')">Miroir</button>
+            <button class="sym-tag" onclick="toggleTag(this,'n2')">Escalier</button>
+            <button class="sym-tag" onclick="toggleTag(this,'n2')">Véhicule</button>
+            <button class="sym-tag" onclick="toggleTag(this,'n2')">Inconnu</button>
+            <button class="sym-tag" onclick="toggleTag(this,'n2')">Transformation</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="c-block">
+        <div class="c-label">Questions carnet</div>
+        <div class="q-list">
+          <div class="q-item"><div class="q-text">La question formulée hier soir me semble-t-elle toujours exacte ?</div><textarea class="journal-ta" id="n2-q1" rows="2" placeholder="…" oninput="saveAll()"></textarea></div>
+          <div class="q-item"><div class="q-text">Y a-t-il des images nocturnes qui font écho à ma question ?</div><textarea class="journal-ta" id="n2-q2" rows="2" placeholder="…" oninput="saveAll()"></textarea></div>
+          <div class="q-item"><div class="q-text">Une version différente de la question me vient-elle ce matin ?</div><textarea class="journal-ta" id="n2-q3" rows="2" placeholder="…" oninput="saveAll()"></textarea></div>
+        </div>
+      </div>
+
+      <div class="c-block">
+        <div class="c-label">Dream Recall Score</div>
+        <div class="recall-row">
+          <button class="recall-btn" onclick="setScore(2,1)" id="n2-s1"><div class="recall-num">1</div><div class="recall-word">Aucun</div></button>
+          <button class="recall-btn" onclick="setScore(2,2)" id="n2-s2"><div class="recall-num">2</div><div class="recall-word">Fragments</div></button>
+          <button class="recall-btn" onclick="setScore(2,3)" id="n2-s3"><div class="recall-num">3</div><div class="recall-word">Partiel</div></button>
+          <button class="recall-btn" onclick="setScore(2,4)" id="n2-s4"><div class="recall-num">4</div><div class="recall-word">Clair</div></button>
+          <button class="recall-btn" onclick="setScore(2,5)" id="n2-s5"><div class="recall-num">5</div><div class="recall-word">Détaillé</div></button>
+        </div>
+      </div>
+
+      <button class="complete-btn" id="n2-done" onclick="completeNight(2)">✦ &nbsp; Marquer la Nuit 2 comme complète</button>
+    </div>
+
+    <!-- ── NUIT 3 ── -->
+    <div class="night-panel" id="np-3">
+      <div class="night-hero">
+        <div class="night-hero-bg"></div>
+        <div class="night-big-num">03</div>
+        <div class="night-phase-tag">Phase 2 · Installation</div>
+        <h2 class="night-title">Installer l'intention<br>cognitive</h2>
+        <div class="night-mission">Mission → Ancrer la question dans l'état hypnagogique</div>
+      </div>
+
+      <div class="c-block">
+        <div class="c-label">Objectif</div>
+        <p class="c-text">Avoir une question ne suffit pas. Il faut l'ancrer profondément avant le sommeil. L'état hypnagogique (veille → sommeil) est particulièrement réceptif : les pensées présentes à ce moment influencent de façon disproportionnée le contenu des rêves.</p>
+      </div>
+
+      <div class="c-block">
+        <div class="c-label">Mes trois zones d'ombre</div>
+        <p class="c-text" style="margin-bottom:12px">Trois aspects du problème que vous ne comprenez pas encore bien.</p>
+        <textarea class="journal-ta" id="n3-zones" rows="4" placeholder="1. …&#10;2. …&#10;3. …" oninput="saveAll()"></textarea>
+      </div>
+
+      <button class="ritual-btn" onclick="startRitual(3)">
+        <span>Lancer le rituel pré-sommeil</span>
+        <div class="ritual-btn-icon">◯</div>
+      </button>
+
+      <div class="c-block">
+        <div class="c-label">Script mental</div>
+        <div class="script-box">
+          <p class="script-text">Je pose ma question et je la laisse aller.<br>Mon cerveau sait quoi faire.<br>Cette nuit, je lui fais confiance.</p>
+        </div>
+      </div>
+
+      <hr class="divider">
+
+      <div class="c-block">
+        <div class="c-label">Au réveil · Notes</div>
+        <textarea class="journal-ta" id="n3-notes" rows="5" placeholder="Fragments, images, mots, sensations…" oninput="saveAll()"></textarea>
+        <div class="tag-system" style="margin-top:12px">
+          <div class="tags-label">Symboles présents</div>
+          <div class="tags-row" id="tags-n3">
+            <button class="sym-tag" onclick="toggleTag(this,'n3')">Eau</button><button class="sym-tag" onclick="toggleTag(this,'n3')">Maison</button><button class="sym-tag" onclick="toggleTag(this,'n3')">Chute</button><button class="sym-tag" onclick="toggleTag(this,'n3')">Lumière</button><button class="sym-tag" onclick="toggleTag(this,'n3')">Chemin</button><button class="sym-tag" onclick="toggleTag(this,'n3')">Porte</button><button class="sym-tag" onclick="toggleTag(this,'n3')">Foule</button><button class="sym-tag" onclick="toggleTag(this,'n3')">Vol</button><button class="sym-tag" onclick="toggleTag(this,'n3')">Animal</button><button class="sym-tag" onclick="toggleTag(this,'n3')">Miroir</button><button class="sym-tag" onclick="toggleTag(this,'n3')">Escalier</button><button class="sym-tag" onclick="toggleTag(this,'n3')">Véhicule</button><button class="sym-tag" onclick="toggleTag(this,'n3')">Inconnu</button><button class="sym-tag" onclick="toggleTag(this,'n3')">Transformation</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="c-block">
+        <div class="c-label">Questions carnet</div>
+        <div class="q-list">
+          <div class="q-item"><div class="q-text">Ai-je perçu l'état de transition veille-sommeil ?</div><textarea class="journal-ta" id="n3-q1" rows="2" placeholder="…" oninput="saveAll()"></textarea></div>
+          <div class="q-item"><div class="q-text">Quelque chose a-t-il changé dans ma façon de voir le problème ?</div><textarea class="journal-ta" id="n3-q2" rows="2" placeholder="…" oninput="saveAll()"></textarea></div>
+          <div class="q-item"><div class="q-text">Quelles images sont apparues, même non liées en apparence ?</div><textarea class="journal-ta" id="n3-q3" rows="2" placeholder="…" oninput="saveAll()"></textarea></div>
+        </div>
+      </div>
+
+      <div class="c-block">
+        <div class="c-label">Dream Recall Score</div>
+        <div class="recall-row">
+          <button class="recall-btn" onclick="setScore(3,1)" id="n3-s1"><div class="recall-num">1</div><div class="recall-word">Aucun</div></button>
+          <button class="recall-btn" onclick="setScore(3,2)" id="n3-s2"><div class="recall-num">2</div><div class="recall-word">Fragments</div></button>
+          <button class="recall-btn" onclick="setScore(3,3)" id="n3-s3"><div class="recall-num">3</div><div class="recall-word">Partiel</div></button>
+          <button class="recall-btn" onclick="setScore(3,4)" id="n3-s4"><div class="recall-num">4</div><div class="recall-word">Clair</div></button>
+          <button class="recall-btn" onclick="setScore(3,5)" id="n3-s5"><div class="recall-num">5</div><div class="recall-word">Détaillé</div></button>
+        </div>
+      </div>
+
+      <button class="complete-btn" id="n3-done" onclick="completeNight(3)">✦ &nbsp; Marquer la Nuit 3 comme complète</button>
+    </div>
+
+    <!-- ── NUIT 4 ── -->
+    <div class="night-panel" id="np-4">
+      <div class="night-hero">
+        <div class="night-hero-bg"></div>
+        <div class="night-big-num">04</div>
+        <div class="night-phase-tag">Phase 2 · Incubation</div>
+        <h2 class="night-title">Incubation active</h2>
+        <div class="night-mission">Mission → Activer la pensée divergente avant l'endormissement</div>
+      </div>
+
+      <div class="c-block">
+        <div class="c-label">Objectif</div>
+        <p class="c-text">C'est la nuit centrale du protocole. Vous passez à l'incubation active : immerger profondément votre conscience dans la question juste avant le sommeil, en activant simultanément le système émotionnel et la pensée associative libre.</p>
+      </div>
+
+      <div class="c-block">
+        <div class="c-label">Ce qui est vraiment en jeu</div>
+        <textarea class="journal-ta" id="n4-enjeu" rows="4" placeholder="Pourquoi ce problème compte vraiment pour vous. Les raisons profondes — pas rationnelles." oninput="saveAll()"></textarea>
+      </div>
+
+      <button class="ritual-btn" onclick="startRitual(4)">
+        <span>Lancer le rituel pré-sommeil</span>
+        <div class="ritual-btn-icon">◯</div>
+      </button>
+
+      <div class="c-block">
+        <div class="c-label">Script mental</div>
+        <div class="script-box">
+          <p class="script-text">Ce soir, j'explore sans juger.<br>Mon cerveau est libre d'aller là où je n'irais pas consciemment.<br>Je suis curieux de ce qu'il va trouver.</p>
+        </div>
+      </div>
+
+      <hr class="divider">
+
+      <div class="c-block">
+        <div class="c-label">Au réveil · Matinée la plus importante</div>
+        <p class="c-text" style="margin-bottom:12px;">Restez 30 secondes les yeux fermés avant d'écrire. Laissez les images revenir.</p>
+        <textarea class="journal-ta" id="n4-notes" rows="5" placeholder="Notez tout — avant le téléphone." oninput="saveAll()"></textarea>
+        <div class="tag-system" style="margin-top:12px">
+          <div class="tags-label">Symboles présents</div>
+          <div class="tags-row" id="tags-n4">
+            <button class="sym-tag" onclick="toggleTag(this,'n4')">Eau</button><button class="sym-tag" onclick="toggleTag(this,'n4')">Maison</button><button class="sym-tag" onclick="toggleTag(this,'n4')">Chute</button><button class="sym-tag" onclick="toggleTag(this,'n4')">Lumière</button><button class="sym-tag" onclick="toggleTag(this,'n4')">Chemin</button><button class="sym-tag" onclick="toggleTag(this,'n4')">Porte</button><button class="sym-tag" onclick="toggleTag(this,'n4')">Foule</button><button class="sym-tag" onclick="toggleTag(this,'n4')">Vol</button><button class="sym-tag" onclick="toggleTag(this,'n4')">Animal</button><button class="sym-tag" onclick="toggleTag(this,'n4')">Miroir</button><button class="sym-tag" onclick="toggleTag(this,'n4')">Escalier</button><button class="sym-tag" onclick="toggleTag(this,'n4')">Véhicule</button><button class="sym-tag" onclick="toggleTag(this,'n4')">Inconnu</button><button class="sym-tag" onclick="toggleTag(this,'n4')">Transformation</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="c-block">
+        <div class="c-label">Questions carnet</div>
+        <div class="q-list">
+          <div class="q-item"><div class="q-text">Quelle est la première image ou sensation revenue au réveil ?</div><textarea class="journal-ta" id="n4-q1" rows="2" placeholder="…" oninput="saveAll()"></textarea></div>
+          <div class="q-item"><div class="q-text">Y a-t-il un personnage, un lieu, une situation que vous pouvez relier à votre problème ?</div><textarea class="journal-ta" id="n4-q2" rows="2" placeholder="…" oninput="saveAll()"></textarea></div>
+          <div class="q-item"><div class="q-text">Si votre rêve était une métaphore de votre problème, que dirait-il ?</div><textarea class="journal-ta" id="n4-q3" rows="2" placeholder="…" oninput="saveAll()"></textarea></div>
+        </div>
+      </div>
+
+      <div class="c-block">
+        <div class="c-label">Dream Recall Score</div>
+        <div class="recall-row">
+          <button class="recall-btn" onclick="setScore(4,1)" id="n4-s1"><div class="recall-num">1</div><div class="recall-word">Aucun</div></button>
+          <button class="recall-btn" onclick="setScore(4,2)" id="n4-s2"><div class="recall-num">2</div><div class="recall-word">Fragments</div></button>
+          <button class="recall-btn" onclick="setScore(4,3)" id="n4-s3"><div class="recall-num">3</div><div class="recall-word">Partiel</div></button>
+          <button class="recall-btn" onclick="setScore(4,4)" id="n4-s4"><div class="recall-num">4</div><div class="recall-word">Clair</div></button>
+          <button class="recall-btn" onclick="setScore(4,5)" id="n4-s5"><div class="recall-num">5</div><div class="recall-word">Détaillé</div></button>
+        </div>
+      </div>
+
+      <button class="complete-btn" id="n4-done" onclick="completeNight(4)">✦ &nbsp; Marquer la Nuit 4 comme complète</button>
+    </div>
+
+    <!-- ── NUIT 5 ── -->
+    <div class="night-panel" id="np-5">
+      <div class="night-hero">
+        <div class="night-hero-bg"></div>
+        <div class="night-big-num">05</div>
+        <div class="night-phase-tag">Phase 3 · Extraction</div>
+        <h2 class="night-title">Amplifier la capture<br>onirique</h2>
+        <div class="night-mission">Mission → Structurer la capture pour extraire plus de signal</div>
+      </div>
+
+      <div class="c-block">
+        <div class="c-label">Objectif</div>
+        <p class="c-text">La qualité d'un insight dépend de la qualité de la capture. Cette nuit, vous affinez votre système en utilisant une grille narrative structurée. La richesse d'un rêve est dans ses détails sensoriels — pas seulement ce qui s'est passé, mais comment ça semblait.</p>
+      </div>
+
+      <button class="ritual-btn" onclick="startRitual(5)">
+        <span>Lancer le rituel pré-sommeil</span>
+        <div class="ritual-btn-icon">◯</div>
+      </button>
+
+      <div class="c-block">
+        <div class="c-label">Script mental</div>
+        <div class="script-box">
+          <p class="script-text">Cette nuit, je remarque.<br>Je capture ce qui passe.<br>Même les fragments ont de la valeur.</p>
+        </div>
+      </div>
+
+      <hr class="divider">
+
+      <div class="c-block">
+        <div class="c-label">Grille de capture en 5 zones</div>
+        <div class="capture-grid">
+          <div class="capture-cell">
+            <div class="capture-cell-label">Images</div>
+            <textarea class="journal-ta" id="n5-images" rows="3" placeholder="Images visuelles…" oninput="saveAll()"></textarea>
+          </div>
+          <div class="capture-cell">
+            <div class="capture-cell-label">Émotions</div>
+            <textarea class="journal-ta" id="n5-emotions" rows="3" placeholder="Émotions ressenties…" oninput="saveAll()"></textarea>
+          </div>
+          <div class="capture-cell">
+            <div class="capture-cell-label">Personnages</div>
+            <textarea class="journal-ta" id="n5-perso" rows="3" placeholder="Qui était présent…" oninput="saveAll()"></textarea>
+          </div>
+          <div class="capture-cell">
+            <div class="capture-cell-label">Actions</div>
+            <textarea class="journal-ta" id="n5-actions" rows="3" placeholder="Ce qui s'est passé…" oninput="saveAll()"></textarea>
+          </div>
+          <div class="capture-cell capture-full">
+            <div class="capture-cell-label">Atmosphère</div>
+            <textarea class="journal-ta" id="n5-atmo" rows="3" placeholder="Couleurs, sons, textures, tonalité…" oninput="saveAll()"></textarea>
+          </div>
+        </div>
+      </div>
+
+      <div class="c-block">
+        <div class="c-label">Symboles présents</div>
+        <div class="tags-row" id="tags-n5">
+          <button class="sym-tag" onclick="toggleTag(this,'n5')">Eau</button><button class="sym-tag" onclick="toggleTag(this,'n5')">Maison</button><button class="sym-tag" onclick="toggleTag(this,'n5')">Chute</button><button class="sym-tag" onclick="toggleTag(this,'n5')">Lumière</button><button class="sym-tag" onclick="toggleTag(this,'n5')">Chemin</button><button class="sym-tag" onclick="toggleTag(this,'n5')">Porte</button><button class="sym-tag" onclick="toggleTag(this,'n5')">Foule</button><button class="sym-tag" onclick="toggleTag(this,'n5')">Vol</button><button class="sym-tag" onclick="toggleTag(this,'n5')">Animal</button><button class="sym-tag" onclick="toggleTag(this,'n5')">Miroir</button><button class="sym-tag" onclick="toggleTag(this,'n5')">Escalier</button><button class="sym-tag" onclick="toggleTag(this,'n5')">Véhicule</button><button class="sym-tag" onclick="toggleTag(this,'n5')">Inconnu</button><button class="sym-tag" onclick="toggleTag(this,'n5')">Transformation</button>
+        </div>
+      </div>
+
+      <div class="c-block">
+        <div class="c-label">Le pont avec votre question</div>
+        <textarea class="journal-ta" id="n5-pont" rows="3" placeholder="Relisez votre question d'incubation. Cherchez un lien, même ténu…" oninput="saveAll()"></textarea>
+      </div>
+
+      <div class="c-block">
+        <div class="c-label">Dream Recall Score</div>
+        <div class="recall-row">
+          <button class="recall-btn" onclick="setScore(5,1)" id="n5-s1"><div class="recall-num">1</div><div class="recall-word">Aucun</div></button>
+          <button class="recall-btn" onclick="setScore(5,2)" id="n5-s2"><div class="recall-num">2</div><div class="recall-word">Fragments</div></button>
+          <button class="recall-btn" onclick="setScore(5,3)" id="n5-s3"><div class="recall-num">3</div><div class="recall-word">Partiel</div></button>
+          <button class="recall-btn" onclick="setScore(5,4)" id="n5-s4"><div class="recall-num">4</div><div class="recall-word">Clair</div></button>
+          <button class="recall-btn" onclick="setScore(5,5)" id="n5-s5"><div class="recall-num">5</div><div class="recall-word">Détaillé</div></button>
+        </div>
+      </div>
+
+      <button class="complete-btn" id="n5-done" onclick="completeNight(5)">✦ &nbsp; Marquer la Nuit 5 comme complète</button>
+    </div>
+
+    <!-- ── NUIT 6 ── -->
+    <div class="night-panel" id="np-6">
+      <div class="night-hero">
+        <div class="night-hero-bg"></div>
+        <div class="night-big-num">06</div>
+        <div class="night-phase-tag">Phase 3 · Extraction</div>
+        <h2 class="night-title">Interprétation<br>orientée problème</h2>
+        <div class="night-mission">Mission → Extraire le sens avec la méthode des 3 traductions</div>
+      </div>
+
+      <div class="c-block">
+        <div class="c-label">Récurrences des 5 nuits</div>
+        <p class="c-text" style="margin-bottom:12px">Relisez les notes des cinq dernières nuits. Cherchez : une image qui revient, une émotion persistante, un type de situation qui se répète.</p>
+        <textarea class="journal-ta" id="n6-recurrences" rows="4" placeholder="Éléments récurrents observés…" oninput="saveAll()"></textarea>
+      </div>
+
+      <button class="ritual-btn" onclick="startRitual(6)">
+        <span>Lancer le rituel pré-sommeil</span>
+        <div class="ritual-btn-icon">◯</div>
+      </button>
+
+      <div class="c-block">
+        <div class="c-label">Script mental</div>
+        <div class="script-box">
+          <p class="script-text">Ce soir, je regarde avec un regard neuf.<br>Je suis prêt à être surpris.<br>Mon cerveau me montre l'angle que je n'ai pas encore vu.</p>
+        </div>
+      </div>
+
+      <hr class="divider">
+
+      <div class="c-block">
+        <div class="c-label">Méthode des 3 traductions</div>
+        <div class="traduction-card">
+          <div class="traduction-header">
+            <div class="traduction-icon">♡</div>
+            <div class="traduction-title">Émotionnelle</div>
+          </div>
+          <div class="traduction-body">
+            <p class="c-text" style="margin-bottom:10px;font-size:13px">Que ressent le personnage principal du rêve ?</p>
+            <textarea class="journal-ta" id="n6-t1" rows="3" placeholder="…" oninput="saveAll()"></textarea>
+          </div>
+        </div>
+        <div class="traduction-card">
+          <div class="traduction-header">
+            <div class="traduction-icon">↔</div>
+            <div class="traduction-title">Dynamique</div>
+          </div>
+          <div class="traduction-body">
+            <p class="c-text" style="margin-bottom:10px;font-size:13px">Quel mouvement, changement ou blocage se produit ?</p>
+            <textarea class="journal-ta" id="n6-t2" rows="3" placeholder="…" oninput="saveAll()"></textarea>
+          </div>
+        </div>
+        <div class="traduction-card">
+          <div class="traduction-header">
+            <div class="traduction-icon">◇</div>
+            <div class="traduction-title">Stratégique</div>
+          </div>
+          <div class="traduction-body">
+            <p class="c-text" style="margin-bottom:10px;font-size:13px">Si ce rêve était un conseil indirect, lequel serait-il ?</p>
+            <textarea class="journal-ta" id="n6-t3" rows="3" placeholder="…" oninput="saveAll()"></textarea>
+          </div>
+        </div>
+      </div>
+
+      <div class="c-block">
+        <div class="c-label">Symboles présents</div>
+        <div class="tags-row" id="tags-n6">
+          <button class="sym-tag" onclick="toggleTag(this,'n6')">Eau</button><button class="sym-tag" onclick="toggleTag(this,'n6')">Maison</button><button class="sym-tag" onclick="toggleTag(this,'n6')">Chute</button><button class="sym-tag" onclick="toggleTag(this,'n6')">Lumière</button><button class="sym-tag" onclick="toggleTag(this,'n6')">Chemin</button><button class="sym-tag" onclick="toggleTag(this,'n6')">Porte</button><button class="sym-tag" onclick="toggleTag(this,'n6')">Foule</button><button class="sym-tag" onclick="toggleTag(this,'n6')">Vol</button><button class="sym-tag" onclick="toggleTag(this,'n6')">Animal</button><button class="sym-tag" onclick="toggleTag(this,'n6')">Miroir</button><button class="sym-tag" onclick="toggleTag(this,'n6')">Escalier</button><button class="sym-tag" onclick="toggleTag(this,'n6')">Véhicule</button><button class="sym-tag" onclick="toggleTag(this,'n6')">Inconnu</button><button class="sym-tag" onclick="toggleTag(this,'n6')">Transformation</button>
+        </div>
+      </div>
+
+      <div class="c-block">
+        <div class="c-label">Dream Recall Score</div>
+        <div class="recall-row">
+          <button class="recall-btn" onclick="setScore(6,1)" id="n6-s1"><div class="recall-num">1</div><div class="recall-word">Aucun</div></button>
+          <button class="recall-btn" onclick="setScore(6,2)" id="n6-s2"><div class="recall-num">2</div><div class="recall-word">Fragments</div></button>
+          <button class="recall-btn" onclick="setScore(6,3)" id="n6-s3"><div class="recall-num">3</div><div class="recall-word">Partiel</div></button>
+          <button class="recall-btn" onclick="setScore(6,4)" id="n6-s4"><div class="recall-num">4</div><div class="recall-word">Clair</div></button>
+          <button class="recall-btn" onclick="setScore(6,5)" id="n6-s5"><div class="recall-num">5</div><div class="recall-word">Détaillé</div></button>
+        </div>
+      </div>
+
+      <button class="complete-btn" id="n6-done" onclick="completeNight(6)">✦ &nbsp; Marquer la Nuit 6 comme complète</button>
+    </div>
+
+    <!-- ── NUIT 7 ── -->
+    <div class="night-panel" id="np-7">
+      <div class="night-hero">
+        <div class="night-hero-bg"></div>
+        <div class="night-big-num">07</div>
+        <div class="night-phase-tag">Phase 3 · Synthèse</div>
+        <h2 class="night-title">Extraire les idées<br>exploitables</h2>
+        <div class="night-mission">Mission → Récolter et traduire en action concrète</div>
+      </div>
+
+      <div class="c-block">
+        <div class="c-label">Objectif</div>
+        <p class="c-text">La dernière nuit est une nuit d'intégration. Votre cerveau a travaillé pendant six nuits. Ce soir, vous lui donnez la permission de synthétiser — et demain matin, vous effectuerez la translation finale : de l'expérience nocturne à l'action concrète.</p>
+      </div>
+
+      <div class="c-block">
+        <div class="c-label">Ce qui me surprend en relisant</div>
+        <textarea class="journal-ta" id="n7-surprise" rows="4" placeholder="Idées inattendues, phrases qui résonnent encore…" oninput="saveAll()"></textarea>
+      </div>
+
+      <button class="ritual-btn" onclick="startRitual(7)">
+        <span>Lancer le dernier rituel</span>
+        <div class="ritual-btn-icon">◯</div>
+      </button>
+
+      <div class="c-block">
+        <div class="c-label">Script mental</div>
+        <div class="script-box">
+          <p class="script-text">La semaine est faite.<br>Je laisse tout reposer.<br>Demain matin, je vois ce qui a émergé.</p>
+        </div>
+      </div>
+
+      <hr class="divider">
+
+      <div class="c-block">
+        <div class="c-label">Matin de la récolte</div>
+        <textarea class="journal-ta" id="n7-notes" rows="5" placeholder="Capturez vos rêves. Puis répondez aux questions ci-dessous." oninput="saveAll()"></textarea>
+        <div class="tag-system" style="margin-top:12px">
+          <div class="tags-label">Symboles présents</div>
+          <div class="tags-row" id="tags-n7">
+            <button class="sym-tag" onclick="toggleTag(this,'n7')">Eau</button><button class="sym-tag" onclick="toggleTag(this,'n7')">Maison</button><button class="sym-tag" onclick="toggleTag(this,'n7')">Chute</button><button class="sym-tag" onclick="toggleTag(this,'n7')">Lumière</button><button class="sym-tag" onclick="toggleTag(this,'n7')">Chemin</button><button class="sym-tag" onclick="toggleTag(this,'n7')">Porte</button><button class="sym-tag" onclick="toggleTag(this,'n7')">Foule</button><button class="sym-tag" onclick="toggleTag(this,'n7')">Vol</button><button class="sym-tag" onclick="toggleTag(this,'n7')">Animal</button><button class="sym-tag" onclick="toggleTag(this,'n7')">Miroir</button><button class="sym-tag" onclick="toggleTag(this,'n7')">Escalier</button><button class="sym-tag" onclick="toggleTag(this,'n7')">Véhicule</button><button class="sym-tag" onclick="toggleTag(this,'n7')">Inconnu</button><button class="sym-tag" onclick="toggleTag(this,'n7')">Transformation</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="c-block">
+        <div class="c-label">Récolte finale</div>
+        <div class="q-list">
+          <div class="q-item"><div class="q-text">En une phrase : ce que j'ai compris sur mon problème que je ne savais pas lundi.</div><textarea class="journal-ta" id="n7-q1" rows="3" placeholder="…" oninput="saveAll()"></textarea></div>
+          <div class="q-item"><div class="q-text">Une direction que je n'avais pas considérée et qui me semble maintenant pertinente.</div><textarea class="journal-ta" id="n7-q2" rows="3" placeholder="…" oninput="saveAll()"></textarea></div>
+          <div class="q-item"><div class="q-text">Une action concrète que je peux prendre dans les 48 heures.</div><textarea class="journal-ta" id="n7-q3" rows="3" placeholder="…" oninput="saveAll()"></textarea></div>
+        </div>
+      </div>
+
+      <div class="c-block">
+        <div class="c-label">Dream Recall Score final</div>
+        <div class="recall-row">
+          <button class="recall-btn" onclick="setScore(7,1)" id="n7-s1"><div class="recall-num">1</div><div class="recall-word">Aucun</div></button>
+          <button class="recall-btn" onclick="setScore(7,2)" id="n7-s2"><div class="recall-num">2</div><div class="recall-word">Fragments</div></button>
+          <button class="recall-btn" onclick="setScore(7,3)" id="n7-s3"><div class="recall-num">3</div><div class="recall-word">Partiel</div></button>
+          <button class="recall-btn" onclick="setScore(7,4)" id="n7-s4"><div class="recall-num">4</div><div class="recall-word">Clair</div></button>
+          <button class="recall-btn" onclick="setScore(7,5)" id="n7-s5"><div class="recall-num">5</div><div class="recall-word">Détaillé</div></button>
+        </div>
+      </div>
+
+      <button class="complete-btn" id="n7-done" onclick="completeNight(7)">✦ &nbsp; Terminer l'expérience</button>
+    </div>
+
+    <!-- Symbol map -->
+    <div class="symbol-map" id="symbol-map" style="margin-top:48px;display:none">
+      <div class="symbol-map-title">Carte des symboles récurrents</div>
+      <div class="symbol-cloud" id="symbol-cloud"></div>
+    </div>
+
+    <!-- Constellation teaser -->
+    <div class="constellation-teaser" id="constellation-teaser" onclick="openConstellation()" style="display:none">
+      <div class="constellation-teaser-title">✦ Dream Constellation</div>
+      <div class="constellation-teaser-sub">Visualisation de vos symboles</div>
+      <div class="constellation-teaser-locked" id="teaser-lock-msg">Disponible après la Nuit 5</div>
+    </div>
+
+  </div><!-- /app-inner -->
+</div><!-- /s-app -->
+
+<!-- ════════════════════════════════
+     SCREEN: DREAM CONSTELLATION
+════════════════════════════════ -->
+<div class="screen" id="s-constellation" style="overflow-y:auto;">
+  <div class="constellation-wrap">
+    <div class="constellation-eyebrow">ONEIRA · Analyse symbolique</div>
+    <h2 class="constellation-title">Dream Constellation</h2>
+    <p class="constellation-sub">La carte de votre univers onirique cette semaine</p>
+
+    <canvas id="constellation-canvas" width="500" height="460"></canvas>
+
+    <div class="constellation-legend">
+      <div class="constellation-legend-item">
+        <div class="legend-dot" style="background:var(--vs)"></div>
+        <span>Taille = fréquence</span>
+      </div>
+      <div class="constellation-legend-item">
+        <div class="legend-dot" style="background:rgba(139,92,246,0.3);width:20px;height:1px;border-radius:0"></div>
+        <span>Lignes = co-occurrence</span>
+      </div>
+    </div>
+
+    <!-- Pattern Engine embedded -->
+    <div class="pattern-engine" id="constellation-pattern"></div>
+
+    <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;">
+      <button class="btn-primary" onclick="goTo('app')"><span>← Retour</span></button>
+      <button class="btn-ghost" onclick="exportConstellationPNG()">↓ Exporter image</button>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════
+     SCREEN: RITUAL
+════════════════════════════════ -->
+<div class="screen" id="s-ritual">
+  <!-- Step 1: Breath -->
+  <div class="ritual-steps active" id="ritual-s1">
+    <div class="ritual-phase-label">Rituel pré-sommeil · 1/3</div>
+    <div class="breath-container">
+      <div class="breath-circle-outer"></div>
+      <div class="breath-circle-mid"></div>
+      <div class="breath-circle-inner"></div>
+      <div class="breath-text">respirez</div>
+    </div>
+    <h3 class="ritual-heading">Ralentissez</h3>
+    <p class="ritual-body">Trois respirations profondes. Inspirez sur 4 temps, retenez 4, expirez 6. Laissez le corps s'installer.</p>
+    <button class="btn-primary" onclick="nextRitual()"><span>Continuer →</span></button>
+  </div>
+
+  <!-- Step 2: Timer + Protocol -->
+  <div class="ritual-steps" id="ritual-s2">
+    <div class="ritual-phase-label">Rituel pré-sommeil · 2/3</div>
+    <div class="timer-container">
+      <svg class="timer-svg" viewBox="0 0 160 160">
+        <circle class="timer-track" cx="80" cy="80" r="65"/>
+        <circle class="timer-progress" id="timer-circle" cx="80" cy="80" r="65"/>
+      </svg>
+      <div class="timer-display">
+        <div class="timer-min" id="timer-display">10:00</div>
+        <div class="timer-label">minutes</div>
+      </div>
+    </div>
+    <h3 class="ritual-heading" id="ritual-protocol-title">Le protocole</h3>
+    <p class="ritual-body" id="ritual-protocol-body">Allongez-vous. Fermez les yeux. Laissez défiler les images de la journée sans les analyser.</p>
+    <div style="display:flex;gap:12px;justify-content:center;">
+      <button class="btn-ghost" id="timer-btn" onclick="toggleTimer()">Démarrer</button>
+      <button class="btn-ghost" onclick="nextRitual()">Passer →</button>
+    </div>
+  </div>
+
+  <!-- Step 3: Script + Sleep -->
+  <div class="ritual-steps" id="ritual-s3">
+    <div class="ritual-phase-label">Rituel pré-sommeil · 3/3</div>
+    <div style="margin-bottom:32px">
+      <div class="sleep-orb"></div>
+    </div>
+    <h3 class="ritual-heading">Répétez mentalement</h3>
+    <div class="ritual-script" id="ritual-script-text">Cette nuit, mon esprit observe et retient.</div>
+    <button class="btn-primary" onclick="goToSleep()"><span>Fermer les yeux maintenant</span></button>
+  </div>
+</div>
+
+<!-- ════════════════════════════════
+     SCREEN: SLEEP
+════════════════════════════════ -->
+<div class="screen" id="s-sleep">
+  <div class="sleep-orb"></div>
+  <h2 class="sleep-title">Vous pouvez fermer<br>les yeux maintenant.</h2>
+  <div class="sleep-sub" style="margin-top:16px">Bonne nuit</div>
+  <button class="btn-ghost" style="margin-top:64px;opacity:0.3" onclick="goTo('app')">Retour</button>
+</div>
+
+<!-- ════════════════════════════════
+     SCREEN: FINAL
+════════════════════════════════ -->
+<div class="screen" id="s-final" style="overflow-y:auto;">
+  <div style="max-width:560px;width:100%;text-align:center;padding:60px 24px 80px;margin:0 auto;">
+
+    <div class="final-sigil" style="width:80px;height:80px;margin:0 auto 32px;">
+      <svg viewBox="0 0 100 100" fill="none">
+        <circle cx="50" cy="50" r="48" stroke="rgba(139,92,246,0.4)" stroke-width="0.5"/>
+        <circle cx="50" cy="50" r="5" fill="var(--vs)"/>
+        <polygon points="50,10 58,34 84,34 64,50 72,74 50,58 28,74 36,50 16,34 42,34" stroke="rgba(139,92,246,0.5)" stroke-width="0.5" fill="rgba(139,92,246,0.05)"/>
+      </svg>
+    </div>
+
+    <div style="font-family:'DM Mono',monospace;font-size:9px;letter-spacing:0.4em;color:var(--vs);margin-bottom:12px">Expérience terminée · 7 nuits</div>
+    <h2 class="final-title">Sept nuits<br>d'exploration</h2>
+    <p class="final-sub">Votre cerveau a fait son travail.</p>
+
+    <!-- Score + Pattern stats -->
+    <div class="pattern-engine" id="final-pattern-engine">
+      <div class="pattern-engine-title">Pattern Engine · Analyse de la semaine</div>
+      <div class="pattern-stats">
+        <div class="pattern-stat">
+          <div class="pattern-stat-value" id="pe-score">—</div>
+          <div class="pattern-stat-label">Score recall<br>moyen / 5</div>
+        </div>
+        <div class="pattern-stat">
+          <div class="pattern-stat-value" id="pe-symbol">—</div>
+          <div class="pattern-stat-label">Symbole<br>dominant</div>
+        </div>
+        <div class="pattern-stat">
+          <div class="pattern-stat-value" id="pe-nights">—</div>
+          <div class="pattern-stat-label">Nuits<br>complètes</div>
+        </div>
+      </div>
+      <div style="margin-top:4px">
+        <div class="pattern-stat-label" style="margin-bottom:8px">Mots récurrents dans vos notes</div>
+        <div class="pattern-keywords" id="pe-keywords"></div>
+      </div>
+      <div class="pattern-motif" id="pe-motif"></div>
+    </div>
+
+    <!-- Dream Constellation mini -->
+    <div style="margin:24px 0;text-align:center;">
+      <canvas id="mini-constellation-canvas" width="500" height="320" style="width:100%;max-width:500px;border-radius:4px;border:1px solid var(--border);cursor:pointer;" onclick="openConstellation()"></canvas>
+      <div style="font-family:'DM Mono',monospace;font-size:8px;letter-spacing:0.3em;color:var(--cream30);margin-top:8px;text-transform:uppercase;">Cliquez pour explorer · Dream Constellation</div>
+    </div>
+
+    <!-- Final Insight Cards -->
+    <div style="text-align:left;margin:32px 0 8px;">
+      <div style="font-family:'DM Mono',monospace;font-size:8px;letter-spacing:0.45em;color:var(--vs);text-transform:uppercase;margin-bottom:20px;">Insight Generator</div>
+    </div>
+    <div class="insight-cards-row" id="insight-cards-row">
+      <!-- Populated by JS -->
+    </div>
+
+    <!-- Share card -->
+    <div class="share-section">
+      <div class="share-section-title">Partager mon expérience</div>
+      <div class="share-section-sub">Générez une carte visuelle de votre semaine</div>
+      <canvas id="share-preview" width="800" height="460" style="display:none"></canvas>
+      <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
+        <button class="btn-primary" onclick="generateShareCard()"><span>✦ Générer la carte</span></button>
+        <button class="btn-ghost" id="share-download-btn" style="display:none" onclick="downloadShareCard()">↓ Télécharger PNG</button>
+      </div>
+    </div>
+
+    <!-- ── Capture email ── -->
+    <div id="email-capture-block" style="
+      margin: 40px 0 0;
+      padding: 24px 24px 20px;
+      border: 1px solid rgba(249,248,245,0.1);
+      border-radius: 2px;
+      text-align: left;
+    ">
+      <div style="
+        font-family: 'DM Mono', monospace;
+        font-size: 8px;
+        letter-spacing: 0.3em;
+        color: rgba(139,92,246,0.65);
+        text-transform: uppercase;
+        margin-bottom: 12px;
+      ">Conserver votre expérience</div>
+      <p style="
+        font-family: 'Jost', sans-serif;
+        font-size: 13px;
+        font-weight: 300;
+        color: rgba(249,248,245,0.5);
+        line-height: 1.75;
+        margin-bottom: 18px;
+      ">Entrez votre adresse pour recevoir vos données et être informé en premier de la suite du laboratoire.</p>
+
+      <div style="display:flex;gap:10px;flex-wrap:wrap;">
+        <input
+          type="email"
+          id="capture-email"
+          placeholder="votre@email.com"
+          style="
+            flex: 1;
+            min-width: 200px;
+            background: rgba(249,248,245,0.05);
+            border: 1px solid rgba(249,248,245,0.12);
+            border-radius: 2px;
+            color: #F9F8F5;
+            font-family: 'Jost', sans-serif;
+            font-size: 14px;
+            font-weight: 300;
+            padding: 12px 16px;
+            outline: none;
+          "
+        />
+        <button
+          onclick="sendData()"
+          id="send-btn"
+          style="
+            font-family: 'DM Mono', monospace;
+            font-size: 9px;
+            letter-spacing: 0.25em;
+            text-transform: uppercase;
+            color: #080e18;
+            background: #8B5CF6;
+            border: none;
+            border-radius: 2px;
+            padding: 12px 24px;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: opacity 0.3s;
+          "
+        >Envoyer →</button>
+      </div>
+
+      <div id="capture-confirm" style="
+        display: none;
+        margin-top: 14px;
+        font-family: 'Cormorant Garamond', serif;
+        font-style: italic;
+        font-size: 14px;
+        color: rgba(139,92,246,0.8);
+        line-height: 1.6;
+      ">✦ Reçu. Vous serez informé en premier.</div>
+
+      <div id="capture-error" style="
+        display: none;
+        margin-top: 14px;
+        font-family: 'DM Mono', monospace;
+        font-size: 10px;
+        color: rgba(249,100,100,0.7);
+        line-height: 1.6;
+      ">Erreur d'envoi. Vérifiez votre connexion et réessayez.</div>
+    </div>
+
+    <!-- ── Teaser Pattern Engine ── -->
+    <div style="
+      margin: 40px 0 32px;
+      padding: 24px 24px 20px;
+      border: 1px solid rgba(139,92,246,0.15);
+      border-left: 2px solid rgba(139,92,246,0.45);
+      border-radius: 2px;
+      text-align: left;
+      background: rgba(109,40,217,0.04);
+    ">
+      <div style="
+        font-family: 'DM Mono', monospace;
+        font-size: 8px;
+        letter-spacing: 0.3em;
+        color: rgba(139,92,246,0.65);
+        text-transform: uppercase;
+        margin-bottom: 12px;
+      ">En phase de recherche</div>
+      <div style="
+        font-family: 'Cormorant Garamond', serif;
+        font-size: 17px;
+        font-weight: 300;
+        font-style: italic;
+        color: rgba(249,248,245,0.85);
+        line-height: 1.15;
+        margin-bottom: 12px;
+      ">Laboratoire d'analyse<br>des trajectoires oniriques</div>
+      <p style="
+        font-family: 'Jost', sans-serif;
+        font-size: 13px;
+        font-weight: 300;
+        color: rgba(249,248,245,0.5);
+        line-height: 1.75;
+        margin-bottom: 0;
+      ">
+        Un module permettant de lire les configurations cognitives qui émergent
+        au fil des nuits est actuellement en phase de recherche. Il produira
+        une trajectoire sur 7 nuits — signature par signature — et une synthèse
+        narrative de votre semaine.<br><br>
+        Les participants de cette expérience seront informés en premier.
+      </p>
+    </div>
+
+    <div class="final-next" style="margin-top:0">Night Lab Series — Prochaines expériences</div>
+    <div class="next-labs">
+      <div class="next-lab-item"><span>Night Lab 02 · The Lucidity Experiment</span><span class="next-lab-tag">Bientôt</span></div>
+      <div class="next-lab-item"><span>Night Lab 03 · The Creativity Experiment</span><span class="next-lab-tag">Bientôt</span></div>
+      <div class="next-lab-item"><span>Night Lab 04 · The Decision Experiment</span><span class="next-lab-tag">Bientôt</span></div>
+    </div>
+
+    <div class="export-row" style="margin-top:32px;">
+      <button class="btn-ghost" onclick="exportTxt()">↓ Exporter notes</button>
+      <button class="btn-ghost" onclick="exportJSON()">↓ Sauvegarder JSON</button>
+      <button class="btn-ghost" onclick="document.getElementById('import-json-input').click()">↑ Importer JSON</button>
+      <input type="file" id="import-json-input" accept=".json" style="display:none" onchange="importJSON(this)">
+      <button class="btn-ghost" onclick="goTo('app')">Retour</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- Formspree — data capture (no external SDK needed) -->
+
+<script>
+// ══════════════════════════════════════
+// STATE
+// ══════════════════════════════════════
+const S = {
+  scores: {},      // {1:3, 2:4, ...}
+  tags: {},        // {n1:['Eau','Porte'], ...}
+  completed: [],
+  currentNight: 1,
+  ritualNight: 1,
+  timerRunning: false,
+  timerSeconds: 600,
+  timerInterval: null,
+  audioOn: false,
+  audioCtx: null,
+  audioNodes: [],
+  currentStep: 0, // onboarding
+  ritualStep: 1,
+};
+
+// ══════════════════════════════════════
+// CANVAS BACKGROUND
+// ══════════════════════════════════════
+(function initCanvas() {
+  const canvas = document.getElementById('bg-canvas');
+  const ctx = canvas.getContext('2d');
+  let W, H, stars = [], nebula = [];
+
+  function resize() {
+    W = canvas.width = window.innerWidth;
+    H = canvas.height = window.innerHeight;
+    stars = [];
+    for (let i = 0; i < 120; i++) {
+      stars.push({
+        x: Math.random() * W,
+        y: Math.random() * H,
+        r: Math.random() * 1.2,
+        a: Math.random(),
+        speed: 0.0005 + Math.random() * 0.001,
+        phase: Math.random() * Math.PI * 2
+      });
+    }
+    nebula = [];
+    for (let i = 0; i < 4; i++) {
+      nebula.push({
+        x: Math.random() * W,
+        y: Math.random() * H,
+        r: 200 + Math.random() * 300,
+        color: i % 2 === 0 ? 'rgba(109,40,217,' : 'rgba(30,58,138,',
+        a: 0.02 + Math.random() * 0.04
+      });
+    }
+  }
+
+  let t = 0;
+  function draw() {
+    t += 0.003;
+    ctx.clearRect(0, 0, W, H);
+
+    nebula.forEach(n => {
+      const grd = ctx.createRadialGradient(n.x, n.y, 0, n.x, n.y, n.r);
+      grd.addColorStop(0, n.color + n.a + ')');
+      grd.addColorStop(1, n.color + '0)');
+      ctx.fillStyle = grd;
+      ctx.beginPath();
+      ctx.arc(n.x, n.y, n.r, 0, Math.PI * 2);
+      ctx.fill();
+    });
+
+    stars.forEach(s => {
+      const flicker = s.a * (0.5 + 0.5 * Math.sin(t * s.speed * 1000 + s.phase));
+      ctx.globalAlpha = flicker;
+      ctx.fillStyle = '#F9F8F5';
+      ctx.beginPath();
+      ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+      ctx.fill();
+    });
+    ctx.globalAlpha = 1;
+    requestAnimationFrame(draw);
+  }
+
+  window.addEventListener('resize', resize);
+  resize();
+  draw();
+})();
+
+// ══════════════════════════════════════
+// NAVIGATION
+// ══════════════════════════════════════
+function goTo(id) {
+  document.querySelectorAll('.screen, #s-app').forEach(s => {
+    s.classList.remove('active');
+    s.classList.add('exit');
+  });
+  setTimeout(() => {
+    document.querySelectorAll('.screen, #s-app').forEach(s => s.classList.remove('exit'));
+    const target = document.getElementById('s-' + id);
+    if (!target) return;
+    target.classList.add('active');
+    if (id === 'app') target.scrollTop = 0;
+    if (id === 'constellation' || id === 'final') target.scrollTop = 0;
+  }, 400);
+}
+
+// ══════════════════════════════════════
+// ONBOARDING
+// ══════════════════════════════════════
+let obStep = 0;
+function nextOnboard() {
+  document.getElementById('ob-' + obStep).classList.remove('active');
+  document.getElementById('od-' + obStep).classList.remove('active');
+  obStep++;
+  document.getElementById('ob-' + obStep).classList.add('active');
+  document.getElementById('od-' + obStep).classList.add('active');
+}
+
+function startApp() {
+  const q = document.getElementById('ob-question').value.trim();
+  if (!q) { toast('Écrivez votre question d\'abord'); return; }
+  saveAll();
+  document.getElementById('week-q-display').textContent = q;
+  goTo('app');
+}
+
+// ══════════════════════════════════════
+// NIGHT NAVIGATION
+// ══════════════════════════════════════
+function showNight(n) {
+  document.querySelectorAll('.night-panel').forEach(p => p.classList.remove('visible'));
+  document.getElementById('np-' + n).classList.add('visible');
+  document.querySelectorAll('.night-pill').forEach((p, i) => {
+    p.classList.remove('active');
+    if (i + 1 === n) p.classList.add('active');
+  });
+  S.currentNight = n;
+  document.getElementById('s-app').scrollTop = 0;
+}
+
+// ══════════════════════════════════════
+// SCORES
+// ══════════════════════════════════════
+function setScore(night, val) {
+  S.scores[night] = val;
+  for (let i = 1; i <= 5; i++) {
+    const b = document.getElementById('n' + night + '-s' + i);
+    if (b) b.classList.toggle('sel', i === val);
+  }
+  updateChart();
+  saveAll();
+}
+
+function updateChart() {
+  for (let n = 1; n <= 7; n++) {
+    const bar = document.getElementById('chart-n' + n);
+    if (!bar) continue;
+    const score = S.scores[n] || 0;
+    const h = score ? (score / 5) * 52 : 2;
+    bar.style.height = h + 'px';
+    bar.className = 'recall-bar';
+    if (S.completed.includes(n)) bar.classList.add('done');
+    else if (n === S.currentNight) bar.classList.add('active-night');
+  }
+}
+
+// ══════════════════════════════════════
+// TAGS
+// ══════════════════════════════════════
+function toggleTag(btn, night) {
+  btn.classList.toggle('selected');
+  if (!S.tags[night]) S.tags[night] = [];
+  const label = btn.textContent;
+  const idx = S.tags[night].indexOf(label);
+  if (idx > -1) S.tags[night].splice(idx, 1);
+  else S.tags[night].push(label);
+  updateSymbolMap();
+  saveAll();
+}
+
+function updateSymbolMap() {
+  const counts = {};
+  Object.values(S.tags).forEach(arr => {
+    arr.forEach(tag => { counts[tag] = (counts[tag] || 0) + 1; });
+  });
+  const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]).filter(([,v]) => v > 0);
+
+  const map = document.getElementById('symbol-map');
+  const cloud = document.getElementById('symbol-cloud');
+
+  if (sorted.length === 0) { map.style.display = 'none'; return; }
+  map.style.display = 'block';
+
+  cloud.innerHTML = sorted.map(([sym, cnt]) =>
+    `<div class="symbol-item">${sym} <span class="symbol-count">×${cnt}</span></div>`
+  ).join('');
+
+  // Final screen
+  const fc = document.getElementById('final-symbol-cloud');
+  if (fc) fc.innerHTML = cloud.innerHTML;
+
+  updateConstellationTeaser();
+}
+
+// ══════════════════════════════════════
+// COMPLETE NIGHT
+// ══════════════════════════════════════
+function completeNight(n) {
+  if (!S.completed.includes(n)) S.completed.push(n);
+
+  const btn = document.getElementById('n' + n + '-done');
+  btn.classList.add('done');
+  btn.textContent = '✦   Nuit ' + n + ' complète';
+
+  const pill = document.getElementById('pill-' + n);
+  pill.classList.remove('active');
+  pill.classList.add('done');
+
+  updateChart();
+  saveAll();
+  toast('Nuit ' + n + ' enregistrée ✦');
+
+  if (n === 7) {
+    setTimeout(() => showFinal(), 1200);
+  } else {
+    setTimeout(() => showNight(n + 1), 800);
+  }
+}
+
+// ══════════════════════════════════════
+// RITUAL
+// ══════════════════════════════════════
+const ritualProtocols = {
+  1: { title: 'Observer sans analyser', body: 'Allongez-vous. Fermez les yeux. Passez deux minutes à laisser défiler les images de la journée sans les analyser. Puis répétez mentalement, trois fois : Cette nuit, j\'observe. Demain matin, je capture.' },
+  2: { title: 'Ancrer la question', body: 'Lisez votre question à voix basse une fois. Répétez-la trois fois mentalement. Puis laissez-la flotter — sans l\'analyser.' },
+  3: { title: 'Visualiser le problème', body: 'Fermez les yeux. Pendant deux minutes, visualisez le problème en images concrètes — des personnes, des lieux, des situations. Quand vous sentez le sommeil approcher, posez votre question une dernière fois.' },
+  4: { title: 'Divergence puis lâcher prise', body: 'Pendant trois minutes, imaginez des réponses absurdes à votre question — une solution gigantesque, une minuscule, une impossible. Ne filtrez rien. Puis posez votre question une dernière fois avec curiosité.' },
+  5: { title: 'Remarquer les détails', body: 'Même protocole que la Nuit 4. Ajoutez : Cette nuit, je remarque les détails. Si vous vous réveillez naturellement, notez quelques mots dans le noir avant de vous rendormir.' },
+  6: { title: 'Regard neuf', body: 'Posez votre question une dernière fois — puis ajoutez : Montre-moi quelque chose que je n\'ai pas encore vu. Laissez votre esprit vagabonder librement.' },
+  7: { title: 'Intégration', body: 'Pas d\'intention active ce soir. Allongez-vous, fermez les yeux, et laissez mentalement la semaine se refermer. Votre cerveau a fait son travail.' },
+};
+
+const ritualScripts = {
+  1: 'Cette nuit, mon esprit observe et retient.\nAu réveil, les images reviennent.\nJe fais confiance à ma mémoire.',
+  2: 'Ma question est claire.\nJe la confie à mon cerveau ce soir.\nDemain matin, j\'écoute ce qui remonte.',
+  3: 'Je pose ma question et je la laisse aller.\nMon cerveau sait quoi faire.\nCette nuit, je lui fais confiance.',
+  4: 'Ce soir, j\'explore sans juger.\nMon cerveau est libre d\'aller là où je n\'irais pas consciemment.\nJe suis curieux de ce qu\'il va trouver.',
+  5: 'Cette nuit, je remarque.\nJe capture ce qui passe.\nMême les fragments ont de la valeur.',
+  6: 'Ce soir, je regarde avec un regard neuf.\nJe suis prêt à être surpris.\nMon cerveau me montre l\'angle que je n\'ai pas encore vu.',
+  7: 'La semaine est faite.\nJe laisse tout reposer.\nDemain matin, je vois ce qui a émergé.',
+};
+
+function startRitual(night) {
+  S.ritualNight = night;
+  S.ritualStep = 1;
+  resetTimer();
+
+  const prot = ritualProtocols[night];
+  document.getElementById('ritual-protocol-title').textContent = prot.title;
+  document.getElementById('ritual-protocol-body').textContent = prot.body;
+
+  const scriptLines = ritualScripts[night].split('\n');
+  document.getElementById('ritual-script-text').textContent = scriptLines[0];
+
+  // Reset ritual steps
+  document.querySelectorAll('.ritual-steps').forEach(s => s.classList.remove('active'));
+  document.getElementById('ritual-s1').classList.add('active');
+
+  goTo('ritual');
+  if (S.audioOn) startAudio();
+}
+
+function nextRitual() {
+  S.ritualStep++;
+  document.querySelectorAll('.ritual-steps').forEach(s => s.classList.remove('active'));
+
+  if (S.ritualStep <= 3) {
+    document.getElementById('ritual-s' + S.ritualStep).classList.add('active');
+    if (S.ritualStep === 2) startTimer();
+  }
+}
+
+function goToSleep() {
+  stopTimer();
+  goTo('sleep');
+}
+
+// ══════════════════════════════════════
+// TIMER
+// ══════════════════════════════════════
+function resetTimer() {
+  stopTimer();
+  S.timerSeconds = 600;
+  updateTimerDisplay();
+  document.getElementById('timer-circle').style.strokeDashoffset = 408;
+  document.getElementById('timer-btn').textContent = 'Démarrer';
+}
+
+function startTimer() {
+  if (S.timerRunning) return;
+  S.timerRunning = true;
+  document.getElementById('timer-btn').textContent = 'Pause';
+  S.timerInterval = setInterval(() => {
+    if (S.timerSeconds <= 0) {
+      stopTimer();
+      nextRitual();
+      return;
+    }
+    S.timerSeconds--;
+    updateTimerDisplay();
+    const progress = 1 - (S.timerSeconds / 600);
+    document.getElementById('timer-circle').style.strokeDashoffset = 408 - (408 * progress);
+  }, 1000);
+}
+
+function stopTimer() {
+  clearInterval(S.timerInterval);
+  S.timerRunning = false;
+  if (document.getElementById('timer-btn'))
+    document.getElementById('timer-btn').textContent = 'Reprendre';
+}
+
+function toggleTimer() {
+  if (S.timerRunning) stopTimer();
+  else startTimer();
+}
+
+function updateTimerDisplay() {
+  const m = Math.floor(S.timerSeconds / 60);
+  const s = S.timerSeconds % 60;
+  document.getElementById('timer-display').textContent =
+    m + ':' + String(s).padStart(2, '0');
+}
+
+// ══════════════════════════════════════
+// AUDIO (Web Audio API)
+// ══════════════════════════════════════
+function toggleAudio() {
+  S.audioOn = !S.audioOn;
+  const btn = document.getElementById('audio-btn');
+  const lbl = document.getElementById('audio-label');
+  if (S.audioOn) {
+    btn.classList.add('on');
+    lbl.textContent = 'Son actif';
+    startAudio();
+  } else {
+    btn.classList.remove('on');
+    lbl.textContent = 'Son';
+    stopAudio();
+  }
+}
+
+function startAudio() {
+  if (S.audioCtx) return;
+  try {
+    S.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const ctx = S.audioCtx;
+    const master = ctx.createGain();
+    master.gain.setValueAtTime(0, ctx.currentTime);
+    master.gain.linearRampToValueAtTime(0.06, ctx.currentTime + 4);
+    master.connect(ctx.destination);
+
+    // Deep drone
+    [40, 80, 120].forEach((freq, i) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq + i * 0.15, ctx.currentTime);
+      gain.gain.setValueAtTime(1 / (i + 1), ctx.currentTime);
+      osc.connect(gain);
+      gain.connect(master);
+      osc.start();
+      S.audioNodes.push(osc);
+    });
+
+    // Subtle high shimmer
+    const shim = ctx.createOscillator();
+    const shimGain = ctx.createGain();
+    shimGain.gain.setValueAtTime(0.02, ctx.currentTime);
+    shim.type = 'sine';
+    shim.frequency.setValueAtTime(528, ctx.currentTime);
+    shim.connect(shimGain);
+    shimGain.connect(master);
+    shim.start();
+    S.audioNodes.push(shim);
+
+    S.audioNodes.push(master);
+  } catch(e) { console.log('Audio not available'); }
+}
+
+function stopAudio() {
+  if (!S.audioCtx) return;
+  try {
+    S.audioNodes.forEach(n => { try { n.stop ? n.stop() : n.disconnect(); } catch(e) {} });
+    S.audioCtx.close();
+  } catch(e) {}
+  S.audioCtx = null;
+  S.audioNodes = [];
+}
+
+// ══════════════════════════════════════
+// MODULE 2 — PATTERN ENGINE
+// ══════════════════════════════════════
+const STOP_WORDS = new Set(['je','tu','il','elle','nous','vous','ils','elles','le','la','les','un','de','du','des','et','en','au','aux','à','ce','qui','que','quoi','mon','ma','mes','son','sa','ses','sur','dans','par','pour','avec','est','sont','était','ont','avoir','être','pas','plus','très','mais','ou','si','ne','se','me','te','lui','leur','y','bien','tout','aussi','même','cette','cet','ces','quel','quelle','dont','où','car','ni','donc','or','quand','comme','puis','alors','encore','déjà','toujours','jamais','souvent','peu','beaucoup']);
+
+function extractKeywords() {
+  const allText = [];
+  for (let n = 1; n <= 7; n++) {
+    ['notes','q1','q2','q3','zones','enjeu','recurrences','surprise','t1','t2','t3','pont','images','emotions','perso','actions','atmo'].forEach(f => {
+      const el = document.getElementById('n' + n + '-' + f);
+      if (el?.value) allText.push(el.value);
+    });
+  }
+
+  const words = allText.join(' ')
+    .toLowerCase()
+    .replace(/[.,!?;:'"«»\(\)\[\]]/g, ' ')
+    .split(/\s+/)
+    .filter(w => w.length > 3 && !STOP_WORDS.has(w));
+
+  const freq = {};
+  words.forEach(w => { freq[w] = (freq[w] || 0) + 1; });
+  return Object.entries(freq)
+    .filter(([,v]) => v >= 2)
+    .sort((a,b) => b[1] - a[1])
+    .slice(0, 8)
+    .map(([w]) => w);
+}
+
+function getSymbolCounts() {
+  const counts = {};
+  Object.values(S.tags).forEach(arr => {
+    (arr || []).forEach(tag => { counts[tag] = (counts[tag] || 0) + 1; });
+  });
+  return counts;
+}
+
+function getDominantSymbol() {
+  const counts = getSymbolCounts();
+  const entries = Object.entries(counts);
+  if (!entries.length) return null;
+  return entries.sort((a,b) => b[1]-a[1])[0];
+}
+
+function getAvgScore() {
+  const scores = Object.values(S.scores);
+  if (!scores.length) return null;
+  return (scores.reduce((a,b)=>a+b,0) / scores.length);
+}
+
+const MOTIF_TEMPLATES = {
+  'Eau':    ['L\'eau traverse vos nuits comme un fil conducteur — elle évoque flux, transformation, et le mouvement entre états.', 'La présence de l\'eau suggère une pensée en mouvement, des émotions en cours de traitement.'],
+  'Porte':  ['Les portes signalent un seuil, une décision en suspens. Votre cerveau perçoit un passage possible.', 'Une porte dans les rêves pointe vers une transition que vous n\'avez pas encore franchie consciemment.'],
+  'Chemin': ['Le chemin comme symbole récurrent indique une question de direction — votre cerveau explore les voies possibles.', 'Un chemin suggère que la question n\'est pas "quoi" mais "comment y aller".'],
+  'Lumière':['La lumière récurrente signale une clarté qui émerge — quelque chose commence à prendre forme.', 'La présence répétée de lumière peut indiquer un insight en cours de formation.'],
+  'Maison': ['La maison représente souvent le soi, l\'identité. Votre question touche peut-être à quelque chose de fondamental dans qui vous êtes.', 'Une maison dans les rêves évoque les fondations — ce sur quoi vous construisez.'],
+  'Chute':  ['La chute est souvent le signal d\'un lâcher-prise nécessaire — votre cerveau explore ce que ça donne de ne plus contrôler.', 'La chute récurrente peut indiquer une résistance à une transition inévitable.'],
+  'Vol':    ['Voler évoque la liberté et les nouvelles perspectives — votre cerveau cherche peut-être une vue d\'ensemble que vous n\'avez pas encore.', 'Le vol comme symbole dominant suggère un désir de dépasser les contraintes actuelles.'],
+  'Foule':  ['La foule dans les rêves touche souvent à la relation aux autres — validation, appartenance, ou distinction.', 'Une foule récurrente peut indiquer que votre question a une dimension sociale ou relationnelle.'],
+  'Animal': ['Les animaux représentent des instincts et des forces que le cerveau conscient tend à ignorer.', 'Un animal récurrent est souvent le porteur d\'une réponse intuitive que vous n\'avez pas encore verbalisée.'],
+  'Miroir': ['Le miroir signale un retour sur soi — votre cerveau vous invite à examiner votre perception de vous-même.', 'Un miroir récurrent suggère que la réponse à votre question est déjà en vous.'],
+  'Escalier': ['L\'escalier est l\'un des symboles de navigation les plus fréquents — votre cerveau explore une transition verticale, un changement de niveau ou de perspective.', 'Un escalier récurrent indique une progression en cours : vers le haut ou vers le bas, votre cognition nocturne teste un déplacement.'],
+  'Véhicule': ['Le véhicule dans les rêves est lié au contrôle — ou à son absence. Votre cerveau explore qui conduit et dans quelle direction.', 'Un véhicule récurrent signale souvent une question sur l\'agentivité : êtes-vous au volant de votre propre trajectoire ?'],
+  'Inconnu': ['La présence d\'inconnus est l\'une des configurations les plus fréquentes du rêve — le cerveau génère des agents sociaux pour tester des interactions.', 'Un inconnu récurrent peut représenter une partie de vous-même non encore intégrée, ou un élément externe que vous n\'avez pas encore nommé.'],
+  'Transformation': ['La transformation dans les rêves est l\'un des marqueurs les plus fiables des rêves d\'insight — le cerveau simule un changement d\'état.', 'Une transformation récurrente indique que quelque chose est prêt à changer de forme dans votre réflexion — pas encore conscient, mais déjà en cours.'],
+};
+
+const ANGLE_TEMPLATES = {
+  'Eau':    'Et si votre problème n\'avait pas besoin d\'être résolu, mais simplement traversé — comme l\'eau traverse un obstacle ?',
+  'Porte':  'Et si la vraie question n\'était pas ce qu\'il y a derrière la porte, mais pourquoi vous n\'êtes pas encore entré ?',
+  'Chemin': 'Et si le chemin que vous cherchez était celui que vous évitez depuis le début ?',
+  'Lumière':'Et si vous cherchiez dans la mauvaise direction — et que la clarté venait d\'un angle que vous n\'avez pas encore examiné ?',
+  'Maison': 'Et si votre problème n\'était pas un problème externe, mais une question sur ce que vous voulez vraiment construire ?',
+  'Chute':  'Et si lâcher prise sur une certaine idée du résultat vous permettait d\'atterrir exactement où vous devez être ?',
+  'Vol':    'Et si vous zoomiez tellement sur les détails que vous n\'avez pas encore vu la solution depuis le haut ?',
+  'Foule':  'Et si la bonne réponse était celle que vous n\'osez pas encore dire à voix haute ?',
+  'Animal': 'Et si votre première intuition — celle que vous avez écartée — était la bonne ?',
+  'Miroir': 'Et si la réponse que vous cherchez à l\'extérieur était déjà visible si vous vous regardiez différemment ?',
+  'Escalier': 'Et si la prochaine étape n\'était pas horizontale — pas une nouvelle direction, mais un niveau différent de la même question ?',
+  'Véhicule': 'Et si vous laissiez quelque chose d\'autre conduire — un instinct, une contrainte, un contexte — plutôt que de forcer la direction ?',
+  'Inconnu': 'Et si la bonne idée venait d\'une source que vous n\'avez pas encore consultée — quelqu\'un, quelque chose, un domaine étranger au vôtre ?',
+  'Transformation': 'Et si la solution ne consistait pas à résoudre le problème tel qu\'il est, mais à le laisser changer de forme ?',
+};
+
+const INTERP_TEMPLATES = {
+  'Eau':    ['Votre question touche à un processus de transformation en cours. Quelque chose est en train de changer de forme — pas encore visible, mais déjà en mouvement.', 'L\'eau dans vos rêves suggère une perméabilité entre les états. Votre cerveau explore des transitions que votre pensée consciente n\'a pas encore formulées.'],
+  'Porte':  ['Un seuil s\'est présenté plusieurs fois cette semaine. Votre cerveau signale qu\'une décision est plus proche qu\'elle ne le paraît.', 'La porte récurrente indique une hésitation réelle — non pas un manque de direction, mais une résistance à franchir ce que vous voyez déjà.'],
+  'Chemin': ['Votre cerveau a exploré plusieurs directions simultanément cette semaine. L\'une d\'elles s\'est imposée plus souvent.', 'La récurrence du chemin suggère une tension entre deux voies possibles — et une préférence inconsciente que vos notes révèlent si vous les relisez.'],
+  'Lumière':['Une clarté partielle s\'est formée pendant la semaine. Elle ne sera peut-être pas totale — mais elle pointe dans une direction.', 'La lumière récurrente signale que quelque chose a émergé. La question est : avez-vous déjà écrit la réponse sans la reconnaître ?'],
+  'Maison': ['Votre question touche à quelque chose de fondamental dans votre identité ou votre manière de fonctionner.', 'La maison comme symbole dominant indique que la réponse implique un retour à ce qui vous constitue — pas une expansion, une consolidation.'],
+  'Chute':  ['Votre cerveau a exploré cette semaine ce que ça donne de perdre le contrôle. C\'est souvent là que les insights les plus utiles émergent.', 'La chute récurrente n\'est pas une menace — c\'est une invitation à tester ce qui arrive si vous cessez de retenir quelque chose.'],
+  'Vol':    ['Votre cerveau cherchait une perspective que vous n\'aviez pas depuis le sol. La solution peut nécessiter un changement d\'échelle.', 'Le vol comme symbole dominant suggère que vous êtes peut-être trop proche du problème pour le voir clairement.'],
+  'Foule':  ['Votre question a une dimension relationnelle que vous n\'avez peut-être pas encore pleinement reconnue.', 'La foule récurrente indique que d\'autres personnes jouent un rôle dans votre réponse — même si votre question semble individuelle.'],
+  'Animal': ['Quelque chose d\'instinctif essaie de passer dans votre conscience. Les notes des premières nuits contiennent peut-être la réponse.', 'Les animaux dans les rêves sont souvent des porteurs d\'une vérité que la pensée rationnelle refoule. Relisez vos fragments les plus vagues.'],
+  'Miroir': ['La réponse à votre question est déjà en vous — votre cerveau vous l\'a montré depuis le début.', 'Un miroir récurrent dans les rêves est une invitation à examiner vos propres hypothèses sur la situation.'],
+};
+
+function runPatternEngine() {
+  const dominant = getDominantSymbol();
+  const avgScore = getAvgScore();
+  const keywords = extractKeywords();
+  const nightsDone = S.completed.length;
+
+  return { dominant, avgScore, keywords, nightsDone };
+}
+
+function renderPatternEngine(containerId) {
+  const container = document.getElementById(containerId);
+  if (!container) return;
+
+  const { dominant, avgScore, keywords, nightsDone } = runPatternEngine();
+
+  const symName = dominant ? dominant[0] : '—';
+  const symCount = dominant ? dominant[1] : 0;
+  const scoreStr = avgScore ? avgScore.toFixed(1) : '—';
+
+  const motifs = MOTIF_TEMPLATES[symName] || ['Continuez à noter vos rêves pour faire apparaître les motifs.'];
+  const motif = motifs[Math.floor(Math.random() * motifs.length)];
+
+  container.innerHTML = `
+    <div class="pattern-engine-title">Pattern Engine · Analyse de la semaine</div>
+    <div class="pattern-stats">
+      <div class="pattern-stat">
+        <div class="pattern-stat-value">${scoreStr}</div>
+        <div class="pattern-stat-label">Score recall<br>moyen / 5</div>
+      </div>
+      <div class="pattern-stat">
+        <div class="pattern-stat-value" style="font-size:20px;padding-top:4px">${symName}</div>
+        <div class="pattern-stat-label">Symbole<br>dominant${symCount > 0 ? ' ×' + symCount : ''}</div>
+      </div>
+      <div class="pattern-stat">
+        <div class="pattern-stat-value">${nightsDone}/7</div>
+        <div class="pattern-stat-label">Nuits<br>complètes</div>
+      </div>
+    </div>
+    ${keywords.length > 0 ? `
+    <div style="margin-top:4px">
+      <div class="pattern-stat-label" style="margin-bottom:8px">Mots récurrents dans vos notes</div>
+      <div class="pattern-keywords">${keywords.map(k => `<span class="pattern-keyword">${k}</span>`).join('')}</div>
+    </div>` : ''}
+    <div class="pattern-motif">${motif}</div>
+  `;
+}
+
+// ══════════════════════════════════════
+// MODULE 1 — DREAM CONSTELLATION
+// ══════════════════════════════════════
+let constellationRAF = null;
+
+function buildConstellationNodes() {
+  const counts = getSymbolCounts();
+  const entries = Object.entries(counts).filter(([,v]) => v > 0);
+  if (!entries.length) return [];
+
+  const maxCount = Math.max(...entries.map(([,v]) => v));
+  const nodes = entries.map(([sym, count], i) => {
+    const angle = (i / entries.length) * Math.PI * 2 - Math.PI / 2;
+    const radius = 0.28 + (1 - count / maxCount) * 0.1;
+    return {
+      sym,
+      count,
+      r: 8 + (count / maxCount) * 22,
+      nx: 0.5 + Math.cos(angle) * radius,
+      ny: 0.5 + Math.sin(angle) * radius,
+      phase: Math.random() * Math.PI * 2,
+      speed: 0.3 + Math.random() * 0.5,
+    };
+  });
+
+  // Also find co-occurrences (same night)
+  const coEdges = [];
+  for (let n = 1; n <= 7; n++) {
+    const nightTags = S.tags['n' + n] || [];
+    for (let i = 0; i < nightTags.length; i++) {
+      for (let j = i + 1; j < nightTags.length; j++) {
+        const a = nodes.findIndex(n => n.sym === nightTags[i]);
+        const b = nodes.findIndex(n => n.sym === nightTags[j]);
+        if (a !== -1 && b !== -1) {
+          const existing = coEdges.find(e =>
+            (e.a === a && e.b === b) || (e.a === b && e.b === a));
+          if (existing) existing.w++;
+          else coEdges.push({ a, b, w: 1 });
+        }
+      }
+    }
+  }
+
+  return { nodes, edges: coEdges };
+}
+
+function drawConstellation(canvasId, compact = false) {
+  const canvas = document.getElementById(canvasId);
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width;
+  const H = canvas.height;
+  const data = buildConstellationNodes();
+
+  if (!data.nodes || !data.nodes.length) {
+    ctx.clearRect(0, 0, W, H);
+    ctx.fillStyle = 'rgba(249,248,245,0.15)';
+    ctx.font = '11px DM Mono, monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText('Sélectionnez des symboles dans les nuits pour les voir apparaître', W/2, H/2);
+    return;
+  }
+
+  const { nodes, edges } = data;
+  let t = 0;
+
+  function frame() {
+    t += 0.008;
+    ctx.clearRect(0, 0, W, H);
+
+    // Background glow
+    const bg = ctx.createRadialGradient(W/2, H/2, 0, W/2, H/2, W * 0.6);
+    bg.addColorStop(0, 'rgba(109,40,217,0.06)');
+    bg.addColorStop(1, 'rgba(8,14,24,0)');
+    ctx.fillStyle = bg;
+    ctx.fillRect(0, 0, W, H);
+
+    // Draw edges
+    edges.forEach(edge => {
+      const na = nodes[edge.a];
+      const nb = nodes[edge.b];
+      const ax = na.nx * W;
+      const ay = na.ny * H;
+      const bx = nb.nx * W;
+      const by = nb.ny * H;
+      const alpha = Math.min(0.4, edge.w * 0.15);
+      ctx.beginPath();
+      ctx.moveTo(ax, ay);
+      ctx.lineTo(bx, by);
+      ctx.strokeStyle = `rgba(139,92,246,${alpha})`;
+      ctx.lineWidth = edge.w * 0.5;
+      ctx.stroke();
+    });
+
+    // Draw nodes
+    nodes.forEach(node => {
+      const x = node.nx * W;
+      const y = node.ny * H;
+      const pulse = 1 + 0.06 * Math.sin(t * node.speed + node.phase);
+      const r = node.r * pulse;
+
+      // Glow
+      const glow = ctx.createRadialGradient(x, y, 0, x, y, r * 3.5);
+      glow.addColorStop(0, `rgba(139,92,246,${0.2 * (node.count / 7)})`);
+      glow.addColorStop(1, 'rgba(139,92,246,0)');
+      ctx.fillStyle = glow;
+      ctx.beginPath();
+      ctx.arc(x, y, r * 3.5, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Node body
+      const grad = ctx.createRadialGradient(x - r*0.3, y - r*0.3, 0, x, y, r);
+      grad.addColorStop(0, 'rgba(249,248,245,0.95)');
+      grad.addColorStop(0.4, 'rgba(139,92,246,0.8)');
+      grad.addColorStop(1, 'rgba(109,40,217,0.4)');
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.arc(x, y, r, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Label
+      if (!compact) {
+        ctx.fillStyle = 'rgba(249,248,245,0.85)';
+        ctx.font = `${Math.max(9, 9 + node.count)}px DM Mono, monospace`;
+        ctx.textAlign = 'center';
+        ctx.fillText(node.sym, x, y + r + 14);
+
+        // Count badge
+        if (node.count > 1) {
+          ctx.fillStyle = 'rgba(139,92,246,0.7)';
+          ctx.font = '8px DM Mono, monospace';
+          ctx.fillText('×' + node.count, x, y + r + 24);
+        }
+      } else {
+        ctx.fillStyle = 'rgba(249,248,245,0.6)';
+        ctx.font = '8px DM Mono, monospace';
+        ctx.textAlign = 'center';
+        ctx.fillText(node.sym, x, y + r + 11);
+      }
+    });
+
+    constellationRAF = requestAnimationFrame(frame);
+  }
+
+  if (constellationRAF) cancelAnimationFrame(constellationRAF);
+  frame();
+}
+
+function openConstellation() {
+  const nightsDone = S.completed.length;
+  if (nightsDone < 5) {
+    toast('Disponible après la Nuit 5 ✦');
+    return;
+  }
+  renderPatternEngine('constellation-pattern');
+  goTo('constellation');
+  setTimeout(() => drawConstellation('constellation-canvas', false), 400);
+}
+
+function exportConstellationPNG() {
+  const canvas = document.getElementById('constellation-canvas');
+  if (!canvas) return;
+  const a = document.createElement('a');
+  a.href = canvas.toDataURL('image/png');
+  a.download = 'oneira-constellation-' + new Date().toISOString().slice(0,10) + '.png';
+  a.click();
+  toast('Constellation exportée');
+}
+
+// ══════════════════════════════════════
+// MODULE 3 — FINAL INSIGHT GENERATOR
+// ══════════════════════════════════════
+function generateInsightCards() {
+  const dominant = getDominantSymbol();
+  const symName = dominant ? dominant[0] : null;
+  const question = document.getElementById('ob-question')?.value || '';
+  const n7q1 = document.getElementById('n7-q1')?.value || '';
+  const n7q2 = document.getElementById('n7-q2')?.value || '';
+  const n7q3 = document.getElementById('n7-q3')?.value || '';
+
+  // Interprétations
+  const interpList = INTERP_TEMPLATES[symName] || [
+    'Votre cerveau a travaillé sur plusieurs niveaux cette semaine. Relisez vos notes en cherchant ce qui vous surprend encore.',
+    'L\'incubation a produit quelque chose — parfois subtil. Les insights apparaissent souvent une semaine après le protocole.'
+  ];
+
+  // Angle nouveau
+  const angle = ANGLE_TEMPLATES[symName] ||
+    'Et si la réponse que vous cherchez n\'était pas une réponse — mais une permission de changer de question ?';
+
+  // Action concrète
+  let action = '';
+  if (n7q3) {
+    action = n7q3;
+  } else if (n7q2) {
+    action = 'Explorer la direction suivante dans les 48h : ' + n7q2.slice(0, 120);
+  } else {
+    action = 'Relisez l\'intégralité de vos notes ce soir, en cherchant la phrase qui vous surprend encore.';
+  }
+
+  const container = document.getElementById('insight-cards-row');
+  if (!container) return;
+
+  container.innerHTML = `
+    <div class="insight-card-v2">
+      <div class="insight-card-header">
+        <div class="insight-card-icon">◇</div>
+        <div class="insight-card-type">Interprétation · 1</div>
+      </div>
+      <div class="insight-card-body">${interpList[0]}</div>
+    </div>
+    ${interpList[1] ? `
+    <div class="insight-card-v2">
+      <div class="insight-card-header">
+        <div class="insight-card-icon">◇</div>
+        <div class="insight-card-type">Interprétation · 2</div>
+      </div>
+      <div class="insight-card-body">${interpList[1]}</div>
+    </div>` : ''}
+    <div class="insight-card-v2">
+      <div class="insight-card-header">
+        <div class="insight-card-icon">↻</div>
+        <div class="insight-card-type">Angle nouveau</div>
+      </div>
+      <div class="insight-card-body">${angle}</div>
+    </div>
+    <div class="insight-card-v2">
+      <div class="insight-card-header">
+        <div class="insight-card-icon">→</div>
+        <div class="insight-card-type">Action · 48h</div>
+      </div>
+      <div class="insight-card-body action-style">${action}</div>
+    </div>
+    ${n7q1 ? `
+    <div class="insight-card-v2">
+      <div class="insight-card-header">
+        <div class="insight-card-icon">✦</div>
+        <div class="insight-card-type">Insight personnel</div>
+      </div>
+      <div class="insight-card-body">${n7q1}</div>
+    </div>` : ''}
+  `;
+}
+
+// ══════════════════════════════════════
+// MODULE 4 — SHARE CARD (Canvas PNG)
+// ══════════════════════════════════════
+function generateShareCard() {
+  const canvas = document.getElementById('share-preview');
+  if (!canvas) return;
+  canvas.style.display = 'block';
+
+  const ctx = canvas.getContext('2d');
+  const W = 800, H = 460;
+  ctx.clearRect(0, 0, W, H);
+
+  // Background
+  const bg = ctx.createLinearGradient(0, 0, W, H);
+  bg.addColorStop(0, '#080e18');
+  bg.addColorStop(0.5, '#0d1520');
+  bg.addColorStop(1, '#080e18');
+  ctx.fillStyle = bg;
+  ctx.fillRect(0, 0, W, H);
+
+  // Violet nebula
+  const neb = ctx.createRadialGradient(W*0.2, H*0.3, 0, W*0.2, H*0.3, 280);
+  neb.addColorStop(0, 'rgba(109,40,217,0.18)');
+  neb.addColorStop(1, 'rgba(109,40,217,0)');
+  ctx.fillStyle = neb;
+  ctx.fillRect(0, 0, W, H);
+
+  const neb2 = ctx.createRadialGradient(W*0.8, H*0.7, 0, W*0.8, H*0.7, 200);
+  neb2.addColorStop(0, 'rgba(30,58,138,0.15)');
+  neb2.addColorStop(1, 'rgba(30,58,138,0)');
+  ctx.fillStyle = neb2;
+  ctx.fillRect(0, 0, W, H);
+
+  // Stars
+  for (let i = 0; i < 60; i++) {
+    ctx.globalAlpha = 0.1 + Math.random() * 0.4;
+    ctx.fillStyle = '#F9F8F5';
+    ctx.beginPath();
+    ctx.arc(Math.random()*W, Math.random()*H, Math.random()*1.5, 0, Math.PI*2);
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+
+  // Border
+  ctx.strokeStyle = 'rgba(139,92,246,0.25)';
+  ctx.lineWidth = 1;
+  ctx.strokeRect(20, 20, W-40, H-40);
+
+  // ONEIRA header
+  ctx.fillStyle = '#8B5CF6';
+  ctx.font = '10px DM Mono, monospace';
+  ctx.letterSpacing = '0.4em';
+  ctx.textAlign = 'left';
+  ctx.fillText('ONEIRA · NIGHT LAB 01', 48, 60);
+
+  ctx.fillStyle = 'rgba(249,248,245,0.25)';
+  ctx.font = '9px DM Mono, monospace';
+  ctx.fillText('THE 7-NIGHT DREAM EXPERIMENT', 48, 78);
+
+  // Divider
+  ctx.strokeStyle = 'rgba(249,248,245,0.08)';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(48, 90); ctx.lineTo(W-48, 90);
+  ctx.stroke();
+
+  // Big score
+  const avgScore = getAvgScore();
+  const scoreStr = avgScore ? avgScore.toFixed(1) : '—';
+  ctx.fillStyle = '#8B5CF6';
+  ctx.font = 'bold 72px Cormorant Garamond, serif';
+  ctx.textAlign = 'left';
+  ctx.fillText(scoreStr, 48, 185);
+
+  ctx.fillStyle = 'rgba(249,248,245,0.35)';
+  ctx.font = '9px DM Mono, monospace';
+  ctx.fillText('DREAM RECALL SCORE / 5', 48, 205);
+
+  // Dominant symbol
+  const dominant = getDominantSymbol();
+  if (dominant) {
+    ctx.fillStyle = 'rgba(249,248,245,0.9)';
+    ctx.font = '300 36px Cormorant Garamond, serif';
+    ctx.textAlign = 'left';
+    ctx.fillText(dominant[0], 48, 260);
+
+    ctx.fillStyle = 'rgba(249,248,245,0.3)';
+    ctx.font = '9px DM Mono, monospace';
+    ctx.fillText('SYMBOLE DOMINANT · ×' + dominant[1], 48, 278);
+  }
+
+  // Insight text
+  const n7q1 = document.getElementById('n7-q1')?.value;
+  const angle = ANGLE_TEMPLATES[dominant?.[0]] || 'L\'exploration nocturne produit des insights que la pensée consciente ne peut atteindre.';
+  const insightText = n7q1 || angle;
+
+  ctx.fillStyle = 'rgba(249,248,245,0.65)';
+  ctx.font = 'italic 300 17px Cormorant Garamond, serif';
+  ctx.textAlign = 'left';
+
+  // Word wrap
+  const words = insightText.split(' ');
+  let line = '', lines = [], maxW = W - 160;
+  words.forEach(word => {
+    const test = line + word + ' ';
+    if (ctx.measureText(test).width > maxW && line !== '') {
+      lines.push(line.trim());
+      line = word + ' ';
+    } else line = test;
+  });
+  if (line) lines.push(line.trim());
+  lines = lines.slice(0, 3);
+
+  lines.forEach((l, i) => {
+    ctx.fillText(l, 48, 330 + i * 26);
+  });
+
+  // Right column — constellation mini
+  const conData = buildConstellationNodes();
+  if (conData.nodes && conData.nodes.length) {
+    const cX = W - 200, cY = 200, cR = 130;
+    conData.edges.forEach(edge => {
+      const na = conData.nodes[edge.a];
+      const nb = conData.nodes[edge.b];
+      ctx.beginPath();
+      ctx.moveTo(cX + (na.nx - 0.5) * cR * 2, cY + (na.ny - 0.5) * cR * 2);
+      ctx.lineTo(cX + (nb.nx - 0.5) * cR * 2, cY + (nb.ny - 0.5) * cR * 2);
+      ctx.strokeStyle = 'rgba(139,92,246,0.2)';
+      ctx.lineWidth = 0.5;
+      ctx.stroke();
+    });
+    conData.nodes.forEach(node => {
+      const nx = cX + (node.nx - 0.5) * cR * 2;
+      const ny = cY + (node.ny - 0.5) * cR * 2;
+      const r = 4 + node.count * 3;
+      const grad = ctx.createRadialGradient(nx, ny, 0, nx, ny, r);
+      grad.addColorStop(0, 'rgba(249,248,245,0.9)');
+      grad.addColorStop(1, 'rgba(139,92,246,0.5)');
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.arc(nx, ny, r, 0, Math.PI*2);
+      ctx.fill();
+    });
+  }
+
+  // Nights completed
+  const nights = S.completed.length;
+  for (let i = 0; i < 7; i++) {
+    const filled = i < nights;
+    ctx.fillStyle = filled ? 'rgba(139,92,246,0.7)' : 'rgba(249,248,245,0.12)';
+    ctx.beginPath();
+    ctx.arc(48 + i * 20, H - 55, 5, 0, Math.PI*2);
+    ctx.fill();
+  }
+
+  ctx.fillStyle = 'rgba(249,248,245,0.2)';
+  ctx.font = '8px DM Mono, monospace';
+  ctx.textAlign = 'left';
+  ctx.fillText(nights + '/7 nuits · ' + new Date().toLocaleDateString('fr-FR'), 48, H - 35);
+
+  // oneira.io watermark
+  ctx.fillStyle = 'rgba(139,92,246,0.4)';
+  ctx.font = '8px DM Mono, monospace';
+  ctx.textAlign = 'right';
+  ctx.fillText('ONEIRA · Le Laboratoire du Sommeil', W - 48, H - 35);
+
+  document.getElementById('share-download-btn').style.display = 'inline-block';
+  toast('Carte générée ✦');
+}
+
+function downloadShareCard() {
+  const canvas = document.getElementById('share-preview');
+  const a = document.createElement('a');
+  a.href = canvas.toDataURL('image/png');
+  a.download = 'oneira-experience-' + new Date().toISOString().slice(0,10) + '.png';
+  a.click();
+}
+
+// ══════════════════════════════════════
+// FINAL SCREEN (updated)
+// ══════════════════════════════════════
+function showFinal() {
+  renderPatternEngine('final-pattern-engine');
+  generateInsightCards();
+
+  // Mini constellation
+  setTimeout(() => drawConstellation('mini-constellation-canvas', true), 600);
+
+  updateSymbolMap();
+  goTo('final');
+}
+
+function showExport() {
+  exportTxt();
+}
+
+// Constellation teaser visibility
+function updateConstellationTeaser() {
+  const teaser = document.getElementById('constellation-teaser');
+  if (!teaser) return;
+
+  const allTags = Object.values(S.tags).flat();
+  const hasTags = allTags.length > 0;
+
+  if (hasTags || S.completed.length >= 1) {
+    teaser.style.display = 'block';
+  }
+
+  const lockMsg = document.getElementById('teaser-lock-msg');
+  if (S.completed.length >= 5) {
+    if (lockMsg) lockMsg.textContent = '→ Ouvrir la constellation';
+    teaser.style.opacity = '1';
+  } else {
+    if (lockMsg) lockMsg.textContent = 'Disponible après la Nuit ' + Math.max(5, S.completed.length + 1);
+    teaser.style.opacity = '0.6';
+  }
+}
+
+// ══════════════════════════════════════
+// SAVE / LOAD
+// ══════════════════════════════════════
+function saveAll() {
+  const data = {
+    question: document.getElementById('ob-question')?.value || '',
+    scores: S.scores,
+    tags: S.tags,
+    completed: S.completed,
+    notes: {}
+  };
+  document.querySelectorAll('textarea[id], input[id]').forEach(el => {
+    data.notes[el.id] = el.value;
+  });
+  try { localStorage.setItem('oneira-v2', JSON.stringify(data)); } catch(e) {}
+  updateChart();
+  updateSymbolMap();
+}
+
+function loadAll() {
+  try {
+    const raw = localStorage.getItem('oneira-v2');
+    if (!raw) return;
+    const data = JSON.parse(raw);
+
+    if (data.question) {
+      const qEl = document.getElementById('ob-question');
+      if (qEl) qEl.value = data.question;
+      document.getElementById('week-q-display').textContent = data.question;
+    }
+    if (data.scores) Object.assign(S.scores, data.scores);
+    if (data.tags) Object.assign(S.tags, data.tags);
+    if (data.completed) S.completed = data.completed;
+
+    if (data.notes) {
+      Object.keys(data.notes).forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.value = data.notes[id];
+      });
+    }
+
+    // Restore scores UI
+    Object.keys(S.scores).forEach(n => {
+      const v = S.scores[n];
+      for (let i = 1; i <= 5; i++) {
+        const b = document.getElementById('n' + n + '-s' + i);
+        if (b) b.classList.toggle('sel', i === v);
+      }
+    });
+
+    // Restore completed
+    S.completed.forEach(n => {
+      const btn = document.getElementById('n' + n + '-done');
+      if (btn) { btn.classList.add('done'); btn.textContent = '✦   Nuit ' + n + ' complète'; }
+      const pill = document.getElementById('pill-' + n);
+      if (pill) { pill.classList.remove('active'); pill.classList.add('done'); }
+    });
+
+    // Restore tags
+    Object.keys(S.tags).forEach(night => {
+      const selectedTags = S.tags[night];
+      const container = document.getElementById('tags-' + night);
+      if (container) {
+        container.querySelectorAll('.sym-tag').forEach(btn => {
+          if (selectedTags.includes(btn.textContent)) btn.classList.add('selected');
+        });
+      }
+    });
+
+    updateChart();
+    updateSymbolMap();
+
+    if (data.question) goTo('app');
+  } catch(e) {}
+}
+
+// ══════════════════════════════════════
+// EXPORT
+// ══════════════════════════════════════
+function exportTxt() {
+  const q = document.getElementById('ob-question')?.value || '—';
+  let t = 'ONEIRA — Le Laboratoire du Sommeil\n═══════════════════════════════════\n\n';
+  t += 'Question : ' + q + '\n\n';
+
+  for (let n = 1; n <= 7; n++) {
+    t += '─── Nuit ' + n + (S.completed.includes(n) ? ' ✦' : '') + '\n';
+    if (S.scores[n]) t += 'Dream Recall : ' + S.scores[n] + '/5\n';
+    if (S.tags[n]?.length) t += 'Symboles : ' + S.tags[n].join(', ') + '\n';
+
+    const noteEl = document.getElementById('n' + n + '-notes');
+    if (noteEl?.value) t += 'Notes : ' + noteEl.value + '\n';
+
+    ['q1','q2','q3'].forEach(q => {
+      const el = document.getElementById('n' + n + '-' + q);
+      if (el?.value) t += '→ ' + el.value + '\n';
+    });
+
+    ['zones','enjeu','recurrences','surprise','t1','t2','t3','pont','images','emotions','perso','actions','atmo'].forEach(f => {
+      const el = document.getElementById('n' + n + '-' + f);
+      if (el?.value) t += '[' + f + '] ' + el.value + '\n';
+    });
+
+    t += '\n';
+  }
+
+  const blob = new Blob([t], {type:'text/plain'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'oneira-lab01-' + new Date().toISOString().slice(0,10) + '.txt';
+  a.click();
+  toast('Export téléchargé');
+}
+
+function exportJSON() {
+  const q = document.getElementById('ob-question')?.value || '';
+  const data = {
+    exportDate: new Date().toISOString(),
+    product: 'ONEIRA Night Lab 01',
+    question: q,
+    scores: S.scores,
+    tags: S.tags,
+    completed: S.completed,
+    notes: {}
+  };
+  document.querySelectorAll('textarea[id]').forEach(el => { data.notes[el.id] = el.value; });
+
+  const blob = new Blob([JSON.stringify(data,null,2)], {type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'oneira-lab01-' + new Date().toISOString().slice(0,10) + '.json';
+  a.click();
+  toast('JSON exporté');
+}
+
+function importJSON(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      const data = JSON.parse(e.target.result);
+      // Restore question
+      if (data.question) {
+        const q = document.getElementById('ob-question');
+        if (q) q.value = data.question;
+      }
+      // Restore scores
+      if (data.scores) {
+        Object.entries(data.scores).forEach(([night, score]) => {
+          S.scores[night] = score;
+          setScore(parseInt(night), score, true);
+        });
+      }
+      // Restore tags
+      if (data.tags) {
+        S.tags = data.tags;
+      }
+      // Restore completed nights
+      if (data.completed) {
+        S.completed = data.completed;
+      }
+      // Restore all textarea values
+      if (data.notes) {
+        Object.entries(data.notes).forEach(([id, value]) => {
+          const el = document.getElementById(id);
+          if (el) el.value = value;
+        });
+      }
+      saveAll();
+      // Reset file input so same file can be re-imported
+      input.value = '';
+      toast('Données restaurées ✓');
+    } catch(err) {
+      toast('Fichier JSON invalide');
+      input.value = '';
+    }
+  };
+  reader.readAsText(file);
+}
+
+// ══════════════════════════════════════
+// EMAIL CAPTURE
+// ══════════════════════════════════════
+function sendData() {
+  const emailEl = document.getElementById('capture-email');
+  const email = emailEl ? emailEl.value.trim() : '';
+
+  if (!email || !email.includes('@')) {
+    toast('Entrez une adresse email valide');
+    return;
+  }
+
+  const btn = document.getElementById('send-btn');
+  btn.textContent = '…';
+  btn.style.opacity = '0.5';
+
+  // Build data summary
+  const q = document.getElementById('ob-question')?.value || '—';
+  let dataStr = '';
+  for (let n = 1; n <= 7; n++) {
+    if (!S.completed.includes(n)) continue;
+    dataStr += `\nNuit ${n}`;
+    if (S.scores[n]) dataStr += ` · Recall ${S.scores[n]}/5`;
+    if (S.tags[n]?.length) dataStr += ` · Symboles: ${S.tags[n].join(', ')}`;
+    const noteEl = document.getElementById('n' + n + '-notes');
+    if (noteEl?.value) dataStr += `\nNotes: ${noteEl.value}`;
+    ['q1','q2','q3'].forEach(q => {
+      const el = document.getElementById('n' + n + '-' + q);
+      if (el?.value) dataStr += `\n→ ${el.value}`;
+    });
+    dataStr += '\n';
+  }
+
+  const params = {
+    user_email: email,
+    name: email,
+    email: email,
+    question: q,
+    data: dataStr || '(aucune nuit complétée)',
+    date: new Date().toLocaleDateString('fr-CH', {
+      day: '2-digit', month: 'long', year: 'numeric'
+    })
+  };
+
+  fetch('https://formspree.io/f/mzdyzbnv', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+    body: JSON.stringify(params),
+  })
+    .then(() => {
+      document.getElementById('capture-confirm').style.display = 'block';
+      document.getElementById('capture-error').style.display = 'none';
+      emailEl.style.display = 'none';
+      btn.style.display = 'none';
+    })
+    .catch(() => {
+      document.getElementById('capture-error').style.display = 'block';
+      btn.textContent = 'Envoyer →';
+      btn.style.opacity = '1';
+    });
+}
+
+// ══════════════════════════════════════
+// TOAST
+// ══════════════════════════════════════
+function toast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2800);
+}
+
+// ══════════════════════════════════════
+// INIT
+// ══════════════════════════════════════
+window.addEventListener('DOMContentLoaded', () => {
+  loadAll();
+  updateChart();
+});
+</script>
+</body>
+</html>
